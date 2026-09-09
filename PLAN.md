@@ -176,13 +176,13 @@ main (baseline app, no feedback feature)
   - [x] Add directory `.gitkeep` files for `cases/` and `repositories/`.
 
 ### Phase 2: Drafter Station
-- [ ] **2.1 Drafter Subagent Definition**
-  - [ ] Author `agent/subagents/drafter/agent.ts` with `outputSchema` enforcing structured discovery metrics.
-  - [ ] Configure `agent/subagents/drafter/sandbox.ts` to inherit the parent sandbox.
-- [ ] **2.2 Drafter Tools**
-  - [ ] Author `agent/subagents/drafter/tools/save_document.ts` providing Blob persistence.
-- [ ] **2.3 Drafter Instructions**
-  - [ ] Author `agent/subagents/drafter/instructions.md` mandating catalog-first policy traversal, requirement extraction, and multi-document generation.
+- [x] **2.1 Drafter Subagent Definition**
+  - [x] Author `agent/subagents/drafter/agent.ts` with `outputSchema` enforcing structured discovery metrics.
+  - [x] Configure `agent/subagents/drafter/sandbox.ts` to inherit the parent sandbox.
+- [x] **2.2 Drafter Tools**
+  - [x] Author `agent/subagents/drafter/tools/save_document.ts` providing Blob persistence.
+- [x] **2.3 Drafter Instructions**
+  - [x] Author `agent/subagents/drafter/instructions.md` mandating catalog-first policy traversal, requirement extraction, and multi-document generation.
 
 ### Phase 3: Verifier Station
 - [ ] **3.1 Verifier Subagent Definition**
@@ -214,7 +214,7 @@ main (baseline app, no feedback feature)
 
 ## 6. Execution Rules During Implementation
 
-1. **Check off items sequentially**: Update this `PLAN.md` file after completing each milestone.
+1. **Check off items sequentially**: Update this `PLAN.md` file after completing each milestone. Commit after each phase.
 2. **Preserve Anonymity**: Ensure zero occurrences of proprietary partner names, personal names, or non-public event dates.
 3. **Keep Code Simple**: Prefer standard Node.js and Eve built-ins over external dependencies.
 4. **Tone and Conventions**: Use Australian spelling (e.g. *behaviour*, *optimise*), no em dashes, and concise documentation.
