@@ -590,11 +590,11 @@ The `case.json` file is updated after each stage gate to allow server-side dashb
   - Format the returned workflow outcome as an executive summary for chat users when Phase Two completes.
 
 ### Phase 2.5: Chat Route Separation
-- [ ] Parameterise `app/_components/agent-chat.tsx` with `sessionBasePath` (defaulting to `/chat`).
-- [ ] Create `app/chat/page.tsx` for new sessionless chat.
-- [ ] Create `app/chat/[sessionId]/page.tsx` for resuming existing chat sessions.
-- [ ] Update `app/s/page.tsx` and `app/s/[sessionId]/page.tsx` to redirect to `/chat`.
-- [ ] Verify that chat streaming, tool rendering, and cancellation operate cleanly under `/chat`.
+- [x] Parameterise `app/_components/agent-chat.tsx` with `sessionBasePath` (defaulting to `/chat`).
+- [x] Create `app/chat/page.tsx` for new sessionless chat.
+- [x] Create `app/chat/[sessionId]/page.tsx` for resuming existing chat sessions.
+- [x] Update `app/s/page.tsx` and `app/s/[sessionId]/page.tsx` to redirect to `/chat`.
+- [x] Verify that chat streaming, tool rendering, and cancellation operate cleanly under `/chat`.
 
 ### Phase 2.6: Web Portal Shell and Dashboard
 - [ ] Install `@xyflow/react` for graph visualisations.

@@ -29,9 +29,11 @@ const AGENT_NAME = "eve-agent";
 export function AgentChat({
   sessionId,
   sessionless = false,
+  sessionBasePath = "/chat",
 }: {
   readonly sessionId?: string;
   readonly sessionless?: boolean;
+  readonly sessionBasePath?: string;
 }) {
   const [cancellationError, setCancellationError] = useState<string>();
   const [hasInputText, setHasInputText] = useState(false);
@@ -51,7 +53,7 @@ export function AgentChat({
           window.history,
           window.history.state,
           "",
-          `/s/${encodeURIComponent(session.sessionId)}`,
+          `${sessionBasePath}/${encodeURIComponent(session.sessionId)}`,
         );
       }
     },
@@ -128,7 +130,11 @@ export function AgentChat({
   return (
     <main className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
       {showConversationLayout ? (
-        <ChatHeader canStartNewChat={activeSessionId !== undefined} />
+        <ChatHeader
+          activeSessionId={activeSessionId}
+          canStartNewChat={activeSessionId !== undefined}
+          sessionBasePath={sessionBasePath}
+        />
       ) : null}
 
       {showConversationLayout ? (
@@ -237,16 +243,40 @@ function ErrorMessage({ message }: { readonly message: string }) {
   );
 }
 
-function ChatHeader({ canStartNewChat }: { readonly canStartNewChat: boolean }) {
+function ChatHeader({
+  canStartNewChat,
+  sessionBasePath,
+  activeSessionId,
+}: {
+  readonly canStartNewChat: boolean;
+  readonly sessionBasePath: string;
+  readonly activeSessionId?: string;
+}) {
   return (
     <header className="pointer-events-none fixed top-0 right-0 left-0 z-20 h-14">
-      <div className="relative mx-auto flex h-full w-full max-w-3xl items-center justify-center bg-background px-24">
-        <span className="truncate text-muted-foreground text-sm">{AGENT_NAME}</span>
+      <div className="relative mx-auto flex h-full w-full max-w-3xl items-center justify-between bg-background px-4 sm:px-6">
+        <div className="pointer-events-auto flex items-center gap-3">
+          <a
+            href="/"
+            className="text-xs text-muted-foreground hover:text-foreground font-medium transition-colors"
+          >
+            ← Portal Dashboard
+          </a>
+          {activeSessionId ? (
+            <a
+              href={`/cases/${encodeURIComponent(activeSessionId)}`}
+              className="text-xs text-primary/80 hover:text-primary underline transition-colors"
+            >
+              Open Case Workspace
+            </a>
+          ) : null}
+        </div>
+        <span className="truncate text-muted-foreground text-sm font-medium">{AGENT_NAME}</span>
         {canStartNewChat ? (
           <Button
             aria-label="Start a new chat"
-            className="pointer-events-auto fixed top-3 right-6 pr-4"
-            onClick={() => window.location.assign("/s")}
+            className="pointer-events-auto"
+            onClick={() => window.location.assign(sessionBasePath)}
             size="sm"
             type="button"
             variant="ghost"
@@ -254,7 +284,9 @@ function ChatHeader({ canStartNewChat }: { readonly canStartNewChat: boolean }) 
             <PlusIcon className="size-4" />
             <span className="hidden font-normal text-sm sm:inline">New chat</span>
           </Button>
-        ) : null}
+        ) : (
+          <div className="w-16" />
+        )}
       </div>
     </header>
   );
