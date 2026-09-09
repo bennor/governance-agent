@@ -597,13 +597,13 @@ The `case.json` file is updated after each stage gate to allow server-side dashb
 - [x] Verify that chat streaming, tool rendering, and cancellation operate cleanly under `/chat`.
 
 ### Phase 2.6: Web Portal Shell and Dashboard
-- [ ] Install `@xyflow/react` for graph visualisations.
-- [ ] Create missing UI primitives under `components/ui/`: `card.tsx`, `table.tsx`, `tabs.tsx`, `progress.tsx`.
-- [ ] Author `app/_components/portal-navigation.tsx` with links to Cases, New Case, Standards, and Chat.
-- [ ] Build `app/page.tsx` (Governance Dashboard):
+- [x] Install `@xyflow/react` for graph visualisations.
+- [x] Create missing UI primitives under `components/ui/`: `card.tsx`, `table.tsx`, `tabs.tsx`, `progress.tsx`.
+- [x] Author `app/_components/portal-navigation.tsx` with links to Cases, New Case, Standards, and Chat.
+- [x] Build `app/page.tsx` (Governance Dashboard):
   - Metric summary cards (Total, In Review, In Remediation, Compliant).
   - Table of active and completed cases with direct links.
-- [ ] Build `app/cases/new/page.tsx` (Feature Intake Form):
+- [x] Build `app/cases/new/page.tsx` (Feature Intake Form):
   - Form validation, template pre-fill, and submission handler.
   - Automatic redirect to `/cases/[caseId]` upon session establishment.
 

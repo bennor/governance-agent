@@ -247,9 +247,12 @@ export async function readCaseManifest(
 }
 
 /**
- * Lists all case manifests across Blob storage.
+ * Lists all case manifests across Blob storage and local sandbox workspace.
  */
 export async function listCaseManifests(): Promise<CaseManifest[]> {
+  const manifestMap = new Map<string, CaseManifest>();
+
+  // 1. Check Blob storage
   try {
     const response = await list({
       prefix: "governance-demo/runs/",
@@ -257,7 +260,6 @@ export async function listCaseManifests(): Promise<CaseManifest[]> {
 
     const manifestBlobs = response.blobs.filter((b) => b.pathname.endsWith("/case.json"));
 
-    const manifests: CaseManifest[] = [];
     for (const blob of manifestBlobs) {
       try {
         const res = await get(blob.pathname, { access: "public" });
@@ -266,21 +268,46 @@ export async function listCaseManifests(): Promise<CaseManifest[]> {
           const parsed = JSON.parse(text);
           const validated = caseManifestSchema.safeParse(parsed);
           if (validated.success) {
-            manifests.push(validated.data);
+            manifestMap.set(validated.data.caseId, validated.data);
           }
         }
       } catch (err) {
         console.warn(`[storage] Could not load manifest from ${blob.pathname}:`, err);
       }
     }
-
-    // Sort newest first by updatedAt
-    manifests.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-    return manifests;
   } catch (error) {
-    console.warn("[storage] listCaseManifests failed or no token configured:", error);
-    return [];
+    // If Blob listing fails (e.g. no token in local dev), continue to local check
   }
+
+  // 2. Check local host workspace for local development runs
+  try {
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const hostCasesDir = path.resolve(process.cwd(), "agent/sandbox/workspace/cases");
+    const entries = await fs.readdir(hostCasesDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        try {
+          const caseJsonPath = path.join(hostCasesDir, entry.name, "case.json");
+          const content = await fs.readFile(caseJsonPath, "utf8");
+          const parsed = JSON.parse(content);
+          const validated = caseManifestSchema.safeParse(parsed);
+          if (validated.success && !manifestMap.has(validated.data.caseId)) {
+            manifestMap.set(validated.data.caseId, validated.data);
+          }
+        } catch {
+          // No case.json in this directory or invalid JSON
+        }
+      }
+    }
+  } catch {
+    // Local directory read optional
+  }
+
+  const manifests = Array.from(manifestMap.values());
+  manifests.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  return manifests;
 }
 
 /**
