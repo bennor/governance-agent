@@ -39,7 +39,7 @@ export default function NewCasePage() {
       "Next.js App Router route handler at /api/feedback, Zod schema validation, email sanitisation, client feedback states, and automated Vitest tests."
     );
     setDataClassification("pii");
-    setPullRequestUrl("https://github.com/bennor/governance-agent-demo-app/pull/1");
+    setPullRequestUrl("");
     setErrorMessage(null);
   };
 
