@@ -15,6 +15,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.0",
     "@vercel/connect": "1.0.0",
     "ai": "^7.0.82",
     "eve": "^0.52.2",
@@ -27,5 +28,4 @@
   "engines": {
     "node": "24.x"
   }
-
 }

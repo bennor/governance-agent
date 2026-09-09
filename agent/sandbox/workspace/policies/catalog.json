@@ -1,0 +1,109 @@
+{
+  "version": "1.0.0",
+  "policies": [
+    {
+      "id": "POL-ENG-001",
+      "category": "engineering",
+      "title": "Software Change Standard",
+      "path": "policies/engineering/POL-ENG-001-software-change-standard.md",
+      "description": "Baseline standards for software modifications, acceptance criteria, dependency additions, configuration, and documentation.",
+      "keywords": ["change", "scope", "dependencies", "configuration", "documentation", "feature", "refactor"],
+      "controls": [
+        { "id": "ENG-001", "name": "Acceptance Criteria Definition", "description": "Changes must satisfy explicit functional acceptance criteria documented in pull request context." },
+        { "id": "ENG-002", "name": "Bounded Change Scope", "description": "Modifications must be bounded to the declared feature scope with no extraneous or unrelated refactoring." },
+        { "id": "ENG-003", "name": "Dependency Justification", "description": "New package dependencies must be minimal, secure, maintained, and justified in the change." },
+        { "id": "ENG-004", "name": "Environment Configuration Isolation", "description": "Configuration values and endpoints must use environment variables rather than hardcoded literals." },
+        { "id": "ENG-005", "name": "Documentation Maintenance", "description": "Public APIs, user-facing features, or operational procedures must update associated documentation." }
+      ]
+    },
+    {
+      "id": "POL-SEC-001",
+      "category": "security",
+      "title": "Secure Coding Standard",
+      "path": "policies/security/POL-SEC-001-secure-coding-standard.md",
+      "description": "Mandatory secure coding practices including input validation, server-side authorisation, secret prevention, and sanitised error delivery.",
+      "keywords": ["security", "validation", "authorisation", "authentication", "secrets", "sanitisation", "injection", "zod"],
+      "controls": [
+        { "id": "SEC-001", "name": "External Input Validation", "description": "All external data entering server boundaries must undergo strict schema validation before processing." },
+        { "id": "SEC-002", "name": "Server-Side Authorisation", "description": "Protected resources and write operations must enforce server-side identity and permission checks." },
+        { "id": "SEC-003", "name": "No Committed Secrets", "description": "Source code and git commits must never contain credentials, API keys, tokens, or sensitive certificates." },
+        { "id": "SEC-004", "name": "Safe Error Responses", "description": "Server error responses returned to clients must never leak internal stack traces or database details." },
+        { "id": "SEC-005", "name": "Safe Query and Command Execution", "description": "Database queries and system commands must use parameterised interfaces preventing injection." }
+      ]
+    },
+    {
+      "id": "POL-TST-001",
+      "category": "testing",
+      "title": "Testing Standard",
+      "path": "policies/testing/POL-TST-001-testing-standard.md",
+      "description": "Requirements for automated testing, happy path validation, negative/error condition coverage, and regression prevention.",
+      "keywords": ["test", "vitest", "jest", "coverage", "unit", "integration", "negative", "regression"],
+      "controls": [
+        { "id": "TST-001", "name": "Automated Test Requirement", "description": "All functional code changes must include corresponding automated unit or integration tests." },
+        { "id": "TST-002", "name": "Happy Path Test Coverage", "description": "Tests must exercise the successful execution paths and verify expected outputs or state changes." },
+        { "id": "TST-003", "name": "Negative and Error Path Coverage", "description": "Tests must explicitly cover failure states, invalid inputs, rejection boundaries, and error codes." },
+        { "id": "TST-004", "name": "Regression Suite Integrity", "description": "Changes must preserve existing test suite integrity without deleting or disabling existing tests." }
+      ]
+    },
+    {
+      "id": "POL-API-001",
+      "category": "api",
+      "title": "HTTP API Standard",
+      "path": "policies/api/POL-API-001-http-api-standard.md",
+      "description": "Standards for REST/HTTP endpoints, method semantics, HTTP status codes, structured envelopes, and error formatting.",
+      "keywords": ["api", "http", "rest", "endpoint", "status", "json", "method", "post", "get", "route"],
+      "controls": [
+        { "id": "API-001", "name": "Semantic HTTP Methods", "description": "Endpoints must use semantic HTTP verbs (GET for retrieval, POST for creation, PUT/PATCH for update, DELETE for removal)." },
+        { "id": "API-002", "name": "Explicit Status Codes", "description": "Responses must emit explicit, standard HTTP status codes (e.g. 200, 201, 400, 401, 404, 500)." },
+        { "id": "API-003", "name": "Structured JSON Envelopes", "description": "Payloads returned by API routes must be consistent JSON structures with defined schemas." },
+        { "id": "API-004", "name": "Request Payload Validation", "description": "HTTP request bodies and query parameters must be validated using schema parsing before business logic execution." },
+        { "id": "API-005", "name": "Internal Stack and Detail Redaction", "description": "5xx responses must emit generic fault descriptions and withhold low-level runtime exceptions from clients." }
+      ]
+    },
+    {
+      "id": "POL-UI-001",
+      "category": "frontend",
+      "title": "Frontend Quality Standard",
+      "path": "policies/frontend/POL-UI-001-frontend-quality-standard.md",
+      "description": "Accessibility, keyboard navigation, user feedback states, responsive design, and dual validation standards for web user interfaces.",
+      "keywords": ["frontend", "ui", "accessibility", "a11y", "label", "form", "keyboard", "loading", "responsive", "react"],
+      "controls": [
+        { "id": "UI-001", "name": "Accessible Form Labels", "description": "All interactive inputs must have programmatic, associated accessible labels via htmlFor or aria-label." },
+        { "id": "UI-002", "name": "Keyboard Navigability", "description": "All interactive elements must be focusable, operable via keyboard, and maintain visible focus styles." },
+        { "id": "UI-003", "name": "Explicit Feedback States", "description": "Forms and asynchronous actions must present clear loading, success, and error feedback states to users." },
+        { "id": "UI-004", "name": "Responsive Layout Support", "description": "User interfaces must adapt gracefully across mobile, tablet, and desktop viewports without clipping content." },
+        { "id": "UI-005", "name": "Dual Client and Server Validation", "description": "Client-side form validation may provide immediate guidance, but server-side validation remains authoritative." }
+      ]
+    },
+    {
+      "id": "POL-OPS-001",
+      "category": "operations",
+      "title": "Observability and Errors Standard",
+      "path": "policies/operations/POL-OPS-001-observability-and-errors.md",
+      "description": "Operational requirements for deliberate error handling, log sanitisation, structured telemetry, client timeouts, and retry limits.",
+      "keywords": ["operations", "logging", "observability", "telemetry", "errors", "timeout", "retry", "pii"],
+      "controls": [
+        { "id": "OPS-001", "name": "Deliberate Error Handling", "description": "Operations subject to failure must use structured try/catch blocks or result types without unhandled promise rejections." },
+        { "id": "OPS-002", "name": "Sanitised Logging", "description": "Log records must be scrubbed of credentials, authentication headers, tokens, and personal identifiable information." },
+        { "id": "OPS-003", "name": "Structured Diagnostic Logs", "description": "Log outputs must include structured context (such as action names, error codes, and correlation identifiers)." },
+        { "id": "OPS-004", "name": "Remote Client Timeouts", "description": "Outbound HTTP or RPC network calls must configure explicit execution timeouts using AbortController or client options." },
+        { "id": "OPS-005", "name": "Bounded Retry Loops", "description": "Retry mechanisms must be bounded with maximum attempt counts and backoff strategies to prevent stampedes." }
+      ]
+    },
+    {
+      "id": "POL-DAT-001",
+      "category": "data",
+      "title": "Application Data Handling Standard",
+      "path": "policies/data/POL-DAT-001-application-data-handling.md",
+      "description": "Rules for classifying application data, enforcing data minimisation, protecting personal data in transit/logs, and documenting retention.",
+      "keywords": ["data", "privacy", "pii", "minimisation", "retention", "gdpr", "personal", "classification"],
+      "controls": [
+        { "id": "DAT-001", "name": "Data Field Classification", "description": "Data payloads handling user information must identify and classify fields by sensitivity (e.g. public, internal, personal)." },
+        { "id": "DAT-002", "name": "Data Minimisation", "description": "Forms and APIs must only collect data fields strictly necessary for the immediate business function." },
+        { "id": "DAT-003", "name": "No Sensitive Data in Logs", "description": "Email addresses, customer identifiers, contact details, and credentials must never appear in application logs." },
+        { "id": "DAT-004", "name": "Retention and Storage Documentation", "description": "Persistent data models must specify retention criteria and intended persistence mechanisms." },
+        { "id": "DAT-005", "name": "Third-Party Data Egress Notice", "description": "Transmission of customer or application data to external third-party services must be declared and reviewed." }
+      ]
+    }
+  ]
+}
