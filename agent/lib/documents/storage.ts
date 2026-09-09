@@ -1,3 +1,6 @@
+import * as os from "node:os";
+import * as path from "node:path";
+import * as fs from "node:fs/promises";
 import { get, put, list, BlobNotFoundError } from "@vercel/blob";
 import { caseManifestSchema, type CaseManifest } from "../governance/schemas.ts";
 
@@ -32,11 +35,31 @@ export interface SaveVerificationReportResult extends SaveCaseDocumentResult {
   resultUrl?: string;
 }
 
+// In-memory cache for fast and reliable reads in stateless/serverless runtimes
+const inMemoryStore = new Map<string, string>();
+
+/**
+ * Returns a writable directory for local caching or fallback.
+ * Uses /tmp in serverless environments (e.g. Vercel) where /var/task is read-only.
+ */
+export function getSafeStorageDir(caseId?: string): string {
+  const isServerless =
+    Boolean(process.env.VERCEL) ||
+    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+    process.cwd().startsWith("/var/task");
+
+  const baseDir = isServerless
+    ? path.join(os.tmpdir(), "governance-cases")
+    : path.resolve(process.cwd(), "agent/sandbox/workspace/cases");
+
+  return caseId ? path.join(baseDir, caseId) : baseDir;
+}
+
 /**
  * Sanitises storage subpaths to prevent path traversal and remove leading slashes.
  */
-export function sanitizeStoragePath(path: string): string {
-  return path
+export function sanitizeStoragePath(storagePath: string): string {
+  return storagePath
     .replace(/\\/g, "/")
     .replace(/^\/+/, "")
     .split("/")
@@ -88,7 +111,7 @@ export function extractCaseId(ctx: {
 
 /**
  * Saves a case document into Vercel Blob with public access and no random suffix.
- * Falls back to local workspace filesystem when Blob credentials are not present (e.g. local tests).
+ * Automatically falls back to /tmp/governance-cases and in-memory store if Blob fails.
  */
 export async function saveCaseDocument({
   caseId,
@@ -98,11 +121,18 @@ export async function saveCaseDocument({
 }: SaveCaseDocumentOptions): Promise<SaveCaseDocumentResult> {
   const pathname = getCaseBlobKey(caseId, filename);
 
+  // 1. Keep in memory store for guaranteed same-runtime lookup
+  inMemoryStore.set(pathname, content);
+
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+
+  // 2. Try Vercel Blob
   try {
     const blob = await put(pathname, content, {
       access: "public",
       addRandomSuffix: false,
       contentType,
+      token: token || undefined,
     });
 
     return {
@@ -110,26 +140,33 @@ export async function saveCaseDocument({
       pathname: blob.pathname,
     };
   } catch (error) {
-    // If Blob storage fails or no token configured, write to local host workspace
-    const fs = await import("node:fs/promises");
-    const path = await import("node:path");
-    const hostDir = path.resolve(process.cwd(), "agent/sandbox/workspace/cases", caseId);
-    const hostFilePath = path.join(hostDir, filename);
-
-    await fs.mkdir(path.dirname(hostFilePath), { recursive: true });
-    await fs.writeFile(hostFilePath, content, "utf8");
-
-    return {
-      url: `file://${hostFilePath}`,
-      pathname,
-    };
+    console.warn(
+      `[storage] Vercel Blob put skipped or failed for ${pathname} (token: ${Boolean(token)}):`,
+      error instanceof Error ? error.message : String(error)
+    );
   }
+
+  // 3. Fallback: write to safe directory (/tmp in serverless, cases directory in local dev)
+  try {
+    const targetDir = getSafeStorageDir(caseId);
+    const targetFilePath = path.join(targetDir, filename);
+    await fs.mkdir(path.dirname(targetFilePath), { recursive: true });
+    await fs.writeFile(targetFilePath, content, "utf8");
+  } catch (fsError) {
+    console.warn(
+      `[storage] Safe filesystem write skipped for ${filename}:`,
+      fsError instanceof Error ? fsError.message : String(fsError)
+    );
+  }
+
+  return {
+    url: pathname,
+    pathname,
+  };
 }
 
 /**
- * Reads a case document from Vercel Blob.
- * Supports fallback paths for backward compatibility between Phase 1 and Phase 2,
- * as well as local workspace filesystem fallback.
+ * Reads a case document from Vercel Blob, falling back to memory and safe filesystem.
  */
 export async function readCaseDocument(
   caseId: string,
@@ -138,17 +175,17 @@ export async function readCaseDocument(
   const primaryPath = getCaseBlobKey(caseId, filename);
   const candidateBlobPaths = [primaryPath];
 
-  // If unversioned filename was requested (e.g. implementation-requirements.md),
-  // check approved baseline snapshot first, then revision-1 as fallbacks
   if (!filename.includes("/")) {
     candidateBlobPaths.push(getCaseBlobKey(caseId, getApprovedBaselineDocumentPath(filename)));
     candidateBlobPaths.push(getCaseBlobKey(caseId, getBaselineDocumentPath(1, filename)));
   }
 
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+
   // 1. Try Blob storage
   for (const pathname of candidateBlobPaths) {
     try {
-      const result = await get(pathname, { access: "public" });
+      const result = await get(pathname, { access: "public", token: token || undefined });
       if (result && result.stream) {
         return await new Response(result.stream).text();
       }
@@ -156,29 +193,40 @@ export async function readCaseDocument(
       if (error instanceof BlobNotFoundError) {
         continue;
       }
-      if (error instanceof Error && (error.message.includes("404") || error.message.includes("No blob credentials"))) {
+      if (
+        error instanceof Error &&
+        (error.message.includes("404") || error.message.includes("No blob credentials"))
+      ) {
         continue;
       }
-      // If error is other than not found or credential missing, continue to local fallback
       break;
     }
   }
 
-  // 2. Try local host workspace fallback
-  try {
-    const fs = await import("node:fs/promises");
-    const path = await import("node:path");
-    const hostDir = path.resolve(process.cwd(), "agent/sandbox/workspace/cases", caseId);
-
-    const candidateLocalFilenames = [filename];
-    if (!filename.includes("/")) {
-      candidateLocalFilenames.push(getApprovedBaselineDocumentPath(filename));
-      candidateLocalFilenames.push(getBaselineDocumentPath(1, filename));
+  // 2. Check in-memory store
+  for (const pathname of candidateBlobPaths) {
+    const cached = inMemoryStore.get(pathname);
+    if (typeof cached === "string" && cached.length > 0) {
+      return cached;
     }
+  }
 
+  // 3. Try safe filesystem fallback
+  const candidateLocalFilenames = [filename];
+  if (!filename.includes("/")) {
+    candidateLocalFilenames.push(getApprovedBaselineDocumentPath(filename));
+    candidateLocalFilenames.push(getBaselineDocumentPath(1, filename));
+  }
+
+  const searchDirs = [
+    getSafeStorageDir(caseId),
+    path.join(os.tmpdir(), "governance-cases", caseId),
+  ];
+
+  for (const dir of searchDirs) {
     for (const localName of candidateLocalFilenames) {
       try {
-        const localPath = path.join(hostDir, localName);
+        const localPath = path.join(dir, localName);
         const content = await fs.readFile(localPath, "utf8");
         if (content) {
           return content;
@@ -187,8 +235,6 @@ export async function readCaseDocument(
         // Continue
       }
     }
-  } catch {
-    // Ignore local fs error
   }
 
   return null;
@@ -196,7 +242,6 @@ export async function readCaseDocument(
 
 /**
  * Saves a versioned revision of a baseline document.
- * Also mirrors to the unversioned root filename for Phase 1 compatibility.
  */
 export async function saveCaseDocumentVersion(
   caseId: string,
@@ -294,22 +339,24 @@ export async function readCaseManifest(
 }
 
 /**
- * Lists all case manifests across Blob storage and local sandbox workspace.
+ * Lists all case manifests across Blob storage and safe local workspace.
  */
 export async function listCaseManifests(): Promise<CaseManifest[]> {
   const manifestMap = new Map<string, CaseManifest>();
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
 
   // 1. Check Blob storage
   try {
     const response = await list({
       prefix: "governance-demo/runs/",
+      token: token || undefined,
     });
 
     const manifestBlobs = response.blobs.filter((b) => b.pathname.endsWith("/case.json"));
 
     for (const blob of manifestBlobs) {
       try {
-        const res = await get(blob.pathname, { access: "public" });
+        const res = await get(blob.pathname, { access: "public", token: token || undefined });
         if (res && res.stream) {
           const text = await new Response(res.stream).text();
           const parsed = JSON.parse(text);
@@ -323,33 +370,47 @@ export async function listCaseManifests(): Promise<CaseManifest[]> {
       }
     }
   } catch (error) {
-    // If Blob listing fails (e.g. no token in local dev), continue to local check
+    // Continue
   }
 
-  // 2. Check local host workspace for local development runs
-  try {
-    const fs = await import("node:fs/promises");
-    const path = await import("node:path");
-    const hostCasesDir = path.resolve(process.cwd(), "agent/sandbox/workspace/cases");
-    const entries = await fs.readdir(hostCasesDir, { withFileTypes: true });
-
-    for (const entry of entries) {
-      if (entry.isDirectory()) {
-        try {
-          const caseJsonPath = path.join(hostCasesDir, entry.name, "case.json");
-          const content = await fs.readFile(caseJsonPath, "utf8");
-          const parsed = JSON.parse(content);
-          const validated = caseManifestSchema.safeParse(parsed);
-          if (validated.success && !manifestMap.has(validated.data.caseId)) {
-            manifestMap.set(validated.data.caseId, validated.data);
-          }
-        } catch {
-          // No case.json in this directory or invalid JSON
+  // 2. Check in-memory store
+  for (const [key, raw] of inMemoryStore.entries()) {
+    if (key.endsWith("/case.json")) {
+      try {
+        const parsed = JSON.parse(raw);
+        const validated = caseManifestSchema.safeParse(parsed);
+        if (validated.success && !manifestMap.has(validated.data.caseId)) {
+          manifestMap.set(validated.data.caseId, validated.data);
         }
+      } catch {
+        // Ignore
       }
     }
-  } catch {
-    // Local directory read optional
+  }
+
+  // 3. Check local directory only in local development
+  if (!process.env.VERCEL) {
+    try {
+      const localBaseDir = path.resolve(process.cwd(), "agent/sandbox/workspace/cases");
+      const entries = await fs.readdir(localBaseDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          try {
+            const caseJsonPath = path.join(localBaseDir, entry.name, "case.json");
+            const content = await fs.readFile(caseJsonPath, "utf8");
+            const parsed = JSON.parse(content);
+            const validated = caseManifestSchema.safeParse(parsed);
+            if (validated.success && !manifestMap.has(validated.data.caseId)) {
+              manifestMap.set(validated.data.caseId, validated.data);
+            }
+          } catch {
+            // No case.json in this directory
+          }
+        }
+      }
+    } catch {
+      // Ignore
+    }
   }
 
   const manifests = Array.from(manifestMap.values());
@@ -359,7 +420,6 @@ export async function listCaseManifests(): Promise<CaseManifest[]> {
 
 /**
  * Saves a versioned verification audit report to Vercel Blob.
- * Writes to attempt-specific path and mirrors to root for Phase 1 compatibility.
  */
 export async function saveVerificationReport({
   caseId,

@@ -5,6 +5,7 @@ import * as path from "node:path";
 import {
   extractCaseId,
   getBaselineDocumentPath,
+  getSafeStorageDir,
   saveCaseDocumentVersion,
 } from "../../../lib/documents/storage.ts";
 
@@ -75,7 +76,7 @@ export default defineTool({
 
     // 3. Persist to host repository filesystem for direct local visibility
     try {
-      const hostDir = path.resolve(process.cwd(), "agent/sandbox/workspace/cases", caseId);
+      const hostDir = getSafeStorageDir(caseId);
       const hostVersionDir = path.resolve(hostDir, `baseline/revision-${revision}`);
       await fs.mkdir(hostVersionDir, { recursive: true });
       await fs.writeFile(path.join(hostDir, filename), content, "utf8");

@@ -4,6 +4,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {
   extractCaseId,
+  getSafeStorageDir,
   getVerificationReportPath,
   getVerificationResultPath,
   saveVerificationReport,
@@ -102,7 +103,7 @@ export default defineTool({
 
     // 3. Persist to host repository filesystem for direct local visibility
     try {
-      const hostDir = path.resolve(process.cwd(), "agent/sandbox/workspace/cases", caseId);
+      const hostDir = getSafeStorageDir(caseId);
       const hostAttemptDir = path.resolve(hostDir, `verification/attempt-${attempt}`);
       await fs.mkdir(hostAttemptDir, { recursive: true });
       await fs.writeFile(path.join(hostDir, filename), content, "utf8");

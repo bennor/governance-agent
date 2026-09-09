@@ -6,6 +6,7 @@ import {
   extractCaseId,
   getApprovedBaselineDocumentPath,
   getBaselineDocumentPath,
+  getSafeStorageDir,
   readCaseDocument,
 } from "../../../lib/documents/storage.ts";
 
@@ -105,9 +106,7 @@ export default defineTool({
     for (const targetPath of targetPaths) {
       try {
         const hostFile = path.resolve(
-          process.cwd(),
-          "agent/sandbox/workspace/cases",
-          caseId,
+          getSafeStorageDir(caseId),
           targetPath
         );
         const hostContent = await fs.readFile(hostFile, "utf8");
