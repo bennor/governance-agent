@@ -10,15 +10,15 @@ import type {
 export const MAX_VERIFICATION_ATTEMPTS = 3;
 
 export const ALLOWED_TRANSITIONS: Record<GovernanceStage, readonly GovernanceStage[]> = {
-  intake: ["drafting", "cancelled"],
-  drafting: ["baseline_review", "cancelled"],
-  baseline_review: ["drafting", "awaiting_pull_request", "verifying", "cancelled"],
-  awaiting_pull_request: ["verifying", "cancelled"],
-  verifying: ["approved", "remediation", "failed", "cancelled"],
-  remediation: ["verifying", "failed", "cancelled"],
-  approved: [],
-  failed: [],
-  cancelled: [],
+  intake: ["drafting", "baseline_review", "cancelled"],
+  drafting: ["drafting", "baseline_review", "cancelled"],
+  baseline_review: ["drafting", "baseline_review", "awaiting_pull_request", "verifying", "cancelled"],
+  awaiting_pull_request: ["awaiting_pull_request", "verifying", "cancelled"],
+  verifying: ["verifying", "approved", "remediation", "failed", "cancelled"],
+  remediation: ["remediation", "verifying", "failed", "cancelled"],
+  approved: ["approved"],
+  failed: ["failed"],
+  cancelled: ["cancelled"],
 };
 
 export class InvalidStateTransitionError extends Error {
@@ -36,6 +36,7 @@ export class InvalidStateTransitionError extends Error {
 }
 
 export function isAllowedTransition(from: GovernanceStage, to: GovernanceStage): boolean {
+  if (from === to) return true;
   return ALLOWED_TRANSITIONS[from]?.includes(to) ?? false;
 }
 

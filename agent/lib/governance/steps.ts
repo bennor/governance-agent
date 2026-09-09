@@ -20,6 +20,7 @@ export async function initCaseStep(caseId: string, intake: GovernanceIntake) {
     return existing;
   }
   const manifest = createInitialManifest(caseId, intake);
+  manifest.stage = "drafting";
   await saveCaseManifest(caseId, manifest);
   return manifest;
 }
