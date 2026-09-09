@@ -45,14 +45,40 @@ function StageCustomNode({ data }: NodeProps<Node<StageNodeData>>) {
   return (
     <div
       className={cn(
-        "relative flex min-w-[200px] max-w-[240px] flex-col rounded-xl border bg-card p-3.5 text-card-foreground shadow-sm transition-all duration-300",
+        "relative flex w-[220px] flex-col rounded-xl border bg-card p-3.5 text-card-foreground shadow-sm transition-all duration-300",
         data.active && "ring-2 ring-primary border-primary shadow-md",
         data.active && data.amber && "ring-amber-500 border-amber-500",
         data.completed && "border-emerald-500/50 bg-emerald-500/5",
         data.failed && "border-destructive/60 bg-destructive/5"
       )}
     >
-      <Handle type="target" position={Position.Left} className="!bg-muted-foreground !size-2" />
+      {/* Left Handles */}
+      <Handle
+        id="target-left"
+        type="target"
+        position={Position.Left}
+        className="!bg-muted-foreground !size-2"
+      />
+      <Handle
+        id="source-left"
+        type="source"
+        position={Position.Left}
+        className="!bg-transparent !border-0 !size-1"
+      />
+
+      {/* Top Handles (for overhead feedback loops) */}
+      <Handle
+        id="target-top"
+        type="target"
+        position={Position.Top}
+        className="!bg-muted-foreground !size-2"
+      />
+      <Handle
+        id="source-top"
+        type="source"
+        position={Position.Top}
+        className="!bg-muted-foreground !size-2"
+      />
 
       <div className="flex items-center justify-between gap-2 mb-1.5">
         <div className="flex items-center gap-2">
@@ -88,7 +114,27 @@ function StageCustomNode({ data }: NodeProps<Node<StageNodeData>>) {
         </p>
       ) : null}
 
-      <Handle type="source" position={Position.Right} className="!bg-muted-foreground !size-2" />
+      {/* Bottom Handles (for downward vertical branches) */}
+      <Handle
+        id="source-bottom"
+        type="source"
+        position={Position.Bottom}
+        className="!bg-muted-foreground !size-2"
+      />
+      <Handle
+        id="target-bottom"
+        type="target"
+        position={Position.Bottom}
+        className="!bg-muted-foreground !size-2"
+      />
+
+      {/* Right Handle (for forward flow) */}
+      <Handle
+        id="source-right"
+        type="source"
+        position={Position.Right}
+        className="!bg-muted-foreground !size-2"
+      />
     </div>
   );
 }
@@ -143,7 +189,7 @@ export function WorkflowGraph({
       {
         id: "intake",
         type: "stageNode",
-        position: { x: 30, y: 120 },
+        position: { x: 30, y: 150 },
         data: {
           label: "1. Intake",
           stage: "intake",
@@ -156,7 +202,7 @@ export function WorkflowGraph({
       {
         id: "drafting",
         type: "stageNode",
-        position: { x: 280, y: 120 },
+        position: { x: 290, y: 150 },
         data: {
           label: "2. Policy Drafting",
           stage: "drafting",
@@ -170,7 +216,7 @@ export function WorkflowGraph({
       {
         id: "review",
         type: "stageNode",
-        position: { x: 530, y: 120 },
+        position: { x: 550, y: 150 },
         data: {
           label: "3. Baseline Review",
           stage: "baseline_review",
@@ -185,7 +231,7 @@ export function WorkflowGraph({
       {
         id: "pr_ready",
         type: "stageNode",
-        position: { x: 780, y: 120 },
+        position: { x: 810, y: 150 },
         data: {
           label: "4. Pull Request",
           stage: "awaiting_pull_request",
@@ -193,13 +239,15 @@ export function WorkflowGraph({
           active: isAwaitingPr,
           completed: currentWeight > 4,
           icon: GitPullRequest,
-          details: prUrl ? "Target repository pull request ready for code audit." : "Awaiting public GitHub pull request link.",
+          details: prUrl
+            ? "Target repository pull request ready for code audit."
+            : "Awaiting public GitHub pull request link.",
         },
       },
       {
         id: "verification",
         type: "stageNode",
-        position: { x: 1030, y: 120 },
+        position: { x: 1070, y: 150 },
         data: {
           label: "5. Code Audit",
           stage: "verifying",
@@ -214,7 +262,7 @@ export function WorkflowGraph({
       {
         id: "remediation",
         type: "stageNode",
-        position: { x: 1030, y: 280 },
+        position: { x: 1070, y: 320 },
         data: {
           label: "Remediation",
           stage: "remediation",
@@ -228,7 +276,7 @@ export function WorkflowGraph({
       {
         id: "verdict",
         type: "stageNode",
-        position: { x: 1280, y: 120 },
+        position: { x: 1330, y: 150 },
         data: {
           label: isApproved ? "Release Approved" : isFailed ? "Release Rejected" : "Final Verdict",
           stage: isApproved ? "approved" : isFailed ? "failed" : "verifying",
@@ -267,27 +315,35 @@ export function WorkflowGraph({
 
   const edges: Edge[] = useMemo(
     () => [
+      // 1. Intake -> Drafting (forward right-to-left)
       {
         id: "e-intake-drafting",
         source: "intake",
+        sourceHandle: "source-right",
         target: "drafting",
+        targetHandle: "target-left",
         animated: isDrafting,
         style: { stroke: currentWeight >= 2 ? "#10b981" : "#71717a" },
         markerEnd: { type: MarkerType.ArrowClosed },
       },
+      // 2. Drafting -> Review (forward right-to-left)
       {
         id: "e-drafting-review",
         source: "drafting",
+        sourceHandle: "source-right",
         target: "review",
+        targetHandle: "target-left",
         animated: isReview,
         style: { stroke: currentWeight >= 3 ? "#10b981" : "#71717a" },
         markerEnd: { type: MarkerType.ArrowClosed },
       },
+      // 3. Review -> Drafting (overhead feedback loop: top-to-top)
       {
-        // Revision feedback loop
         id: "e-review-revision",
         source: "review",
+        sourceHandle: "source-top",
         target: "drafting",
+        targetHandle: "target-top",
         label: "Revisions",
         type: "smoothstep",
         animated: isDrafting && activeRevision > 1,
@@ -295,36 +351,46 @@ export function WorkflowGraph({
         labelStyle: { fill: "#d97706", fontSize: 10, fontWeight: 600 },
         markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
       },
+      // 4. Review -> PR (forward right-to-left)
       {
         id: "e-review-pr",
         source: "review",
+        sourceHandle: "source-right",
         target: "pr_ready",
+        targetHandle: "target-left",
         animated: isAwaitingPr,
         style: { stroke: currentWeight >= 4 ? "#10b981" : "#71717a" },
         markerEnd: { type: MarkerType.ArrowClosed },
       },
+      // 5. PR -> Verification (forward right-to-left)
       {
         id: "e-pr-verify",
         source: "pr_ready",
+        sourceHandle: "source-right",
         target: "verification",
+        targetHandle: "target-left",
         animated: isVerifying,
         style: { stroke: currentWeight >= 5 ? "#10b981" : "#71717a" },
         markerEnd: { type: MarkerType.ArrowClosed },
       },
+      // 6. Verification -> Remediation (clean vertical drop: bottom-to-top)
       {
-        // Non-compliant branch to remediation
         id: "e-verify-remediation",
         source: "verification",
+        sourceHandle: "source-bottom",
         target: "remediation",
+        targetHandle: "target-top",
         animated: isRemediation,
         style: { stroke: isRemediation ? "#ef4444" : "#71717a" },
         markerEnd: { type: MarkerType.ArrowClosed },
       },
+      // 7. Remediation -> Verification (left loop: left-to-left)
       {
-        // Remediation fix loop back to verification
         id: "e-remediation-verify",
         source: "remediation",
+        sourceHandle: "source-left",
         target: "verification",
+        targetHandle: "target-left",
         label: "Fixes Pushed",
         type: "smoothstep",
         animated: isVerifying && (activeAttempt ?? 1) > 1,
@@ -332,26 +398,40 @@ export function WorkflowGraph({
         labelStyle: { fill: "#2563eb", fontSize: 10, fontWeight: 600 },
         markerEnd: { type: MarkerType.ArrowClosed, color: "#3b82f6" },
       },
+      // 8. Verification -> Verdict (forward right-to-left)
       {
         id: "e-verify-verdict",
         source: "verification",
+        sourceHandle: "source-right",
         target: "verdict",
+        targetHandle: "target-left",
         animated: isApproved,
         style: { stroke: isApproved ? "#10b981" : isFailed ? "#ef4444" : "#71717a" },
         markerEnd: { type: MarkerType.ArrowClosed },
       },
     ],
-    [currentWeight, isDrafting, isReview, isAwaitingPr, isVerifying, isRemediation, isApproved, isFailed, activeRevision, activeAttempt]
+    [
+      currentWeight,
+      isDrafting,
+      isReview,
+      isAwaitingPr,
+      isVerifying,
+      isRemediation,
+      isApproved,
+      isFailed,
+      activeRevision,
+      activeAttempt,
+    ]
   );
 
   return (
-    <div className="h-[400px] w-full rounded-xl border border-border bg-card/60 shadow-xs overflow-hidden">
+    <div className="h-[440px] w-full rounded-xl border border-border bg-card/60 shadow-xs overflow-hidden">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.15 }}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
