@@ -2,7 +2,13 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { extractCaseId, readCaseDocument } from "../../../lib/documents/storage.js";
+import {
+  extractCaseId,
+  getApprovedBaselineDocumentPath,
+  getBaselineDocumentPath,
+  getSafeStorageDir,
+  readCaseDocument,
+} from "../../../lib/documents/storage.ts";
 
 export default defineTool({
   description:
@@ -11,8 +17,18 @@ export default defineTool({
     filename: z
       .string()
       .describe(
-        "Filename of the document to read, e.g. implementation-requirements.md, change-design.md, security-and-data-review.md, or policy-applicability.md",
+        "Filename of the document to read, e.g. implementation-requirements.md, change-design.md, security-and-data-review.md, or policy-applicability.md"
       ),
+    fromApproved: z
+      .boolean()
+      .optional()
+      .describe("Whether to read specifically from the approved baseline snapshot (defaults to true)"),
+    revision: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe("Specific revision number to read if not from approved snapshot"),
   }),
   outputSchema: z.object({
     success: z.boolean(),
@@ -22,67 +38,90 @@ export default defineTool({
     content: z.string(),
     error: z.string().optional(),
   }),
-  async execute({ filename }, ctx) {
+  async execute({ filename, fromApproved = true, revision }, ctx) {
     const caseId = extractCaseId(ctx);
 
+    // Determine target lookup paths
+    const targetPaths: string[] = [];
+    if (fromApproved && !filename.includes("/")) {
+      targetPaths.push(getApprovedBaselineDocumentPath(filename));
+    }
+    if (revision !== undefined && !filename.includes("/")) {
+      targetPaths.push(getBaselineDocumentPath(revision, filename));
+    }
+    targetPaths.push(filename);
+
     // 1. Try reading from Vercel Blob
-    try {
-      const blobContent = await readCaseDocument(caseId, filename);
-      if (typeof blobContent === "string" && blobContent.length > 0) {
-        return {
-          success: true,
-          caseId,
-          filename,
-          source: "blob",
-          content: blobContent,
-        };
+    for (const targetPath of targetPaths) {
+      try {
+        const blobContent = await readCaseDocument(caseId, targetPath);
+        if (typeof blobContent === "string" && blobContent.length > 0) {
+          return {
+            success: true,
+            caseId,
+            filename,
+            source: "blob",
+            content: blobContent,
+          };
+        }
+      } catch (error) {
+        console.warn(
+          `Notice: Could not read ${targetPath} from Vercel Blob (case: ${caseId}):`,
+          error instanceof Error ? error.message : String(error)
+        );
       }
-    } catch (error) {
-      console.warn(
-        `Notice: Could not read ${filename} from Vercel Blob (case: ${caseId}):`,
-        error instanceof Error ? error.message : String(error),
-      );
     }
 
     // 2. Fall back to shared sandbox workspace
     try {
       const sandbox = await ctx.getSandbox();
-      const sandboxRelativePath = `cases/${caseId}/${filename}`;
-      const sandboxContent = await sandbox.readTextFile({
-        path: sandboxRelativePath,
-      });
+      for (const targetPath of targetPaths) {
+        try {
+          const sandboxRelativePath = `cases/${caseId}/${targetPath}`;
+          const sandboxContent = await sandbox.readTextFile({
+            path: sandboxRelativePath,
+          });
 
-      if (typeof sandboxContent === "string" && sandboxContent.length > 0) {
-        return {
-          success: true,
-          caseId,
-          filename,
-          source: "sandbox",
-          content: sandboxContent,
-        };
+          if (typeof sandboxContent === "string" && sandboxContent.length > 0) {
+            return {
+              success: true,
+              caseId,
+              filename,
+              source: "sandbox",
+              content: sandboxContent,
+            };
+          }
+        } catch {
+          // Continue to next candidate
+        }
       }
     } catch (error) {
       console.warn(
-        `Notice: Could not read ${filename} from sandbox workspace (case: ${caseId}):`,
-        error instanceof Error ? error.message : String(error),
+        `Notice: Sandbox workspace error for ${filename} (case: ${caseId}):`,
+        error instanceof Error ? error.message : String(error)
       );
     }
 
     // 3. Fall back to host workspace directory
-    try {
-      const hostFile = path.resolve(process.cwd(), "agent/sandbox/workspace/cases", caseId, filename);
-      const hostContent = await fs.readFile(hostFile, "utf8");
-      if (typeof hostContent === "string" && hostContent.length > 0) {
-        return {
-          success: true,
-          caseId,
-          filename,
-          source: "sandbox",
-          content: hostContent,
-        };
+    for (const targetPath of targetPaths) {
+      try {
+        const hostFile = path.resolve(
+          getSafeStorageDir(caseId),
+          targetPath
+        );
+        const hostContent = await fs.readFile(hostFile, "utf8");
+        if (typeof hostContent === "string" && hostContent.length > 0) {
+          return {
+            success: true,
+            caseId,
+            filename,
+            source: "sandbox",
+            content: hostContent,
+          };
+        }
+      } catch {
+        // Intentionally fall through to next candidate
       }
-    } catch {
-      // Intentionally fall through to not_found
     }
 
     return {

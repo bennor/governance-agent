@@ -119,7 +119,7 @@ To test the governance agent against real pull requests with intentional violati
 ## Implementation Plans
 
 - [Phase 1 Implementation Plan](PLAN.md): Architecture baseline, storage foundations, drafter and verifier sub-agents, and HITL verification lifecycle.
-- [Phase 2 Implementation Plan](PHASE_TWO_PLAN.md): Interactive web portal, dedicated chat route, deterministic workflow orchestration via `defineWorkflowTool`, and React Flow state graph.
+- [Phase 2 Implementation Plan](PHASE_TWO_PLAN.md): Interactive web portal, dedicated chat route, deterministic workflow orchestration via `defineWorkflowTool`, and React Flow state graph, operating side by side with Phase 1 via an opt-in trigger.
 
 ---
 

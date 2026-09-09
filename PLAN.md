@@ -24,7 +24,7 @@ The governance agent assists engineering teams in regulated organisations to saf
 - **Durable Case Identity**: The case ID is the root Eve session ID (`ctx.session.parent?.rootSessionId ?? ctx.session.parent?.sessionId ?? ctx.session.id`).
 - **Phase Separation**:
   - **Phase 1 (Completed)**: Fully Eve-based workflow orchestrated via instructions and declared subagents. Eve channel only.
-  - **Phase 2 (Active Implementation Plan)**: Dedicated web portal intake, deterministic stage-gate orchestration with Vercel Workflow SDK, interactive React Flow visualization, separate chat routing, and Blob-backed case state. Refer to [PHASE_TWO_PLAN.md](./PHASE_TWO_PLAN.md) for the active Phase 2 execution checklist.
+  - **Phase 2 (Completed)**: Dedicated web portal intake, deterministic stage-gate orchestration with Vercel Workflow SDK, interactive React Flow visualization, separate chat routing, and Blob-backed case state. Operates side by side with Phase 1 via an explicit opt-in trigger. Refer to [PHASE_TWO_PLAN.md](./PHASE_TWO_PLAN.md) for the detailed Phase 2 implementation record.
 
 ---
 

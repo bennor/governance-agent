@@ -8,3 +8,7 @@ node_modules
 dist
 .DS_Store
 *.tsbuildinfo
+agent/sandbox/workspace/cases/*
+!agent/sandbox/workspace/cases/.gitkeep
+agent/sandbox/workspace/repositories/*
+!agent/sandbox/workspace/repositories/.gitkeep
