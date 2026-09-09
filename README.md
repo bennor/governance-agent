@@ -94,14 +94,15 @@ Normative standards are organised under `agent/sandbox/workspace/policies/` with
    pnpm run typecheck
    ```
 
-3. Build the agent:
-   ```bash
-   pnpm run build
-   ```
-
-4. Launch the local interactive development session:
+3. Launch the web development server (Next.js with integrated Eve agent):
    ```bash
    pnpm run dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000) to interact with the governance agent via the browser UI.
+
+4. Alternatively, launch the Eve CLI development TUI:
+   ```bash
+   pnpm run dev:eve
    ```
 
 ---
