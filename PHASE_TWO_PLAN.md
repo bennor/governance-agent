@@ -561,13 +561,13 @@ The `case.json` file is updated after each stage gate to allow server-side dashb
 - [x] Add unit tests verifying state transitions, invalid transition rejections, and attempt boundaries.
 
 ### Phase 2.2: Versioned Storage Layer
-- [ ] Update `agent/lib/documents/storage.ts`:
-  - Implement `saveCaseManifest(caseId, manifest)` and `readCaseManifest(caseId)`.
-  - Implement `listCaseManifests()` using Blob prefix listing.
-  - Implement revisioned paths: `saveCaseDocumentVersion(caseId, revision, filename, content)`.
-  - Implement approved baseline snapshot helper: `freezeApprovedBaseline(caseId, revision)`.
-  - Implement attempt-specific report saving: `saveVerificationReportVersion(caseId, attempt, content, result)`.
-- [ ] Add unit tests for storage path derivation, traversal sanitisation, and manifest serialization.
+- [x] Update `agent/lib/documents/storage.ts`:
+  - [x] Implement `saveCaseManifest(caseId, manifest)` and `readCaseManifest(caseId)`.
+  - [x] Implement `listCaseManifests()` using Blob prefix listing.
+  - [x] Implement revisioned paths: `saveCaseDocumentVersion(caseId, revision, filename, content)`.
+  - [x] Implement approved baseline snapshot helper: `freezeApprovedBaseline(caseId, revision)`.
+  - [x] Implement attempt-specific report saving: `saveVerificationReportVersion(caseId, attempt, content, result)`.
+- [x] Add unit tests for storage path derivation, traversal sanitisation, and manifest serialization.
 
 ### Phase 2.3: Deterministic Workflow Tool
 - [ ] Author `agent/tools/run_governance_case.ts`:
