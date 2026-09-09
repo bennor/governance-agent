@@ -83,6 +83,7 @@ Normative standards are organised under `agent/sandbox/workspace/policies/` with
 - Node.js 24.x
 - pnpm 11+
 - Vercel account with Blob storage configured (for durable storage)
+- Perimeter edge authentication configured (such as Vercel Passport) for production deployments
 
 ### Local Development
 
