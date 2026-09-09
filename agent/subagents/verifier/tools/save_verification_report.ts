@@ -1,5 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { extractCaseId, saveVerificationReport } from "../../../lib/documents/storage.js";
 
 export default defineTool({
@@ -58,6 +60,18 @@ export default defineTool({
       console.warn(
         `Warning: Vercel Blob report save failed for attempt ${attempt} (case: ${caseId}):`,
         error instanceof Error ? error.message : String(error),
+      );
+    }
+
+    // 3. Persist to host repository filesystem for direct local visibility
+    try {
+      const hostDir = path.resolve(process.cwd(), "agent/sandbox/workspace/cases", caseId);
+      await fs.mkdir(hostDir, { recursive: true });
+      await fs.writeFile(path.join(hostDir, filename), content, "utf8");
+    } catch (hostError) {
+      console.warn(
+        `Notice: Could not write host filesystem copy for ${filename}:`,
+        hostError instanceof Error ? hostError.message : String(hostError),
       );
     }
 

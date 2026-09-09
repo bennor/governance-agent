@@ -1,5 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { extractCaseId, readCaseDocument } from "../../../lib/documents/storage.js";
 
 export default defineTool({
@@ -64,6 +66,23 @@ export default defineTool({
         `Notice: Could not read ${filename} from sandbox workspace (case: ${caseId}):`,
         error instanceof Error ? error.message : String(error),
       );
+    }
+
+    // 3. Fall back to host workspace directory
+    try {
+      const hostFile = path.resolve(process.cwd(), "agent/sandbox/workspace/cases", caseId, filename);
+      const hostContent = await fs.readFile(hostFile, "utf8");
+      if (typeof hostContent === "string" && hostContent.length > 0) {
+        return {
+          success: true,
+          caseId,
+          filename,
+          source: "sandbox",
+          content: hostContent,
+        };
+      }
+    } catch {
+      // Intentionally fall through to not_found
     }
 
     return {

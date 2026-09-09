@@ -73,11 +73,13 @@ This is the primary normative baseline used later by the Verifier. It must be ex
   - Applicable Control IDs
 
 ### Step 5: Persist Documents via `save_document`
-Call the `save_document` tool for each of the four files:
+You MUST call the `save_document` tool for each of the four files before finishing. All four documents must be created and persisted before you conclude:
 1. `save_document` with `filename: "change-design.md"`
 2. `save_document` with `filename: "security-and-data-review.md"`
 3. `save_document` with `filename: "implementation-requirements.md"`
 4. `save_document` with `filename: "policy-applicability.md"`
+
+Do not finish or return a final response until all four documents are successfully persisted using `save_document`.
 
 ### Step 6: Return Structured Completion
 Deliver your final response adhering to the defined `outputSchema` with:

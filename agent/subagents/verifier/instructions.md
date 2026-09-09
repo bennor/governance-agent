@@ -98,10 +98,12 @@ Draft a comprehensive Markdown audit report containing:
      - Why it violates the policy standard.
      - Exact, copy-pasteable remediation recommendation for developers.
 
-Call `save_verification_report` with:
+You MUST call `save_verification_report` with:
 - `attempt`: Current attempt index
 - `verdict`: Final verdict
 - `content`: Complete Markdown report
+
+Do not conclude or return your final structured response until the verification report has been successfully saved via `save_verification_report`.
 
 ### Step 7: Return Structured Output
 Deliver the final response conforming to `outputSchema`:

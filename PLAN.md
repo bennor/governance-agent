@@ -17,6 +17,9 @@ The governance agent assists engineering teams in regulated organisations to saf
 5. Providing specific, actionable remediation findings if non-compliant, supporting iterative re-verification within the same session.
 
 ### 1.2 Core Constraints
+- **Mandatory Sub-Agents**: The specialist sub-agents (`drafter` and `verifier`) are absolutely required components of the architecture and must not be removed, bypassed, or merged into the coordinator at any point. Strict separation of duties between baseline establishment and independent verification is mandatory.
+- **Blocking Sub-Agent Execution**: Sub-agent execution must be synchronous and blocking. The coordinator halts and waits for the sub-agent to complete its entire workflow and return its response before communicating with the user. It must never emit premature interim status messages or run sub-agent tasks as unmonitored background jobs.
+- **Actual Artefact Creation**: The `drafter` sub-agent must physically generate and persist all four assurance documents before completing. The `verifier` sub-agent must complete its audit and persist the verification report before completing.
 - **Simplicity Over Completeness**: Designed as an inspectable demonstration. Uses public GitHub repositories without connector authentication, file-traversal RAG in sandboxes instead of vector embeddings, and single-session durable workflows.
 - **Durable Case Identity**: The case ID is the root Eve session ID (`ctx.session.parent?.rootSessionId ?? ctx.session.parent?.sessionId ?? ctx.session.id`).
 - **Phase Separation**:
@@ -65,25 +68,26 @@ The governance agent assists engineering teams in regulated organisations to saf
 
 ### 2.1 Component Responsibilities
 - **Root Coordinator (`agent/instructions.md`)**:
-  - Manages the single-case lifecycle.
-  - Delegates to `drafter` upon receiving an intake prompt.
-  - Halts at `ask_question` for human review of drafted documents.
+  - Manages the single-case lifecycle and state transitions.
+  - Coordinates mandatory sub-agents using a blocking execution protocol (waits for sub-agent completion before outputting user-facing responses).
+  - Delegates to `drafter` upon receiving an intake prompt without emitting premature background status updates.
+  - Halts at `ask_question` for human review of drafted documents once `drafter` finishes.
   - Collects the GitHub pull request URL.
-  - Delegates to `verifier` to evaluate the implementation.
+  - Delegates to `verifier` to evaluate the implementation and blocks until the full audit report and verdict are returned.
   - Runs the correction loop (up to 3 verification attempts) if findings remain.
-- **Drafter Station (`agent/subagents/drafter/`)**:
+- **Drafter Station Sub-Agent (`agent/subagents/drafter/`)** (Required component, never to be removed):
   - Traverses `/workspace/policies` using catalog metadata and keyword search.
   - Determines policy applicability with justifications.
   - Extracts normative requirements and control IDs.
   - Generates four assurance artefacts: `change-design.md`, `security-and-data-review.md`, `implementation-requirements.md`, and `policy-applicability.md`.
-  - Saves copies to both the sandbox and Vercel Blob.
-- **Verifier Station (`agent/subagents/verifier/`)**:
+  - Actually persists copies to the sandbox, host workspace, and Vercel Blob before completing.
+- **Verifier Station Sub-Agent (`agent/subagents/verifier/`)** (Required component, never to be removed):
   - Validates public GitHub pull request URLs.
   - Clones the repository and fetches the pull request head ref into `/workspace/repositories/`.
-  - Reads approved requirements from Vercel Blob.
+  - Reads approved requirements from storage.
   - Analyses diffs, file trees, configurations, and test suites.
   - Evaluates each control with file-and-line evidence.
-  - Saves a versioned audit report (`verification-report-attempt-N.md`) to Vercel Blob.
+  - Saves a versioned audit report (`verification-report-attempt-N.md`) to storage before returning.
   - Returns a structured verdict (`compliant`, `non_compliant`, or `unable_to_verify`).
 - **Shared Sandbox (`agent/sandbox/`)**:
   - Uses `defaultBackend()` to support macOS local dev (Docker / MicroSandbox / just-bash) and Vercel Sandbox in deployment.
@@ -214,7 +218,10 @@ main (baseline app, no feedback feature)
 
 ## 6. Execution Rules During Implementation
 
-1. **Check off items sequentially**: Update this `PLAN.md` file after completing each milestone. Commit after each phase.
-2. **Preserve Anonymity**: Ensure zero occurrences of proprietary partner names, personal names, or non-public event dates.
-3. **Keep Code Simple**: Prefer standard Node.js and Eve built-ins over external dependencies.
-4. **Tone and Conventions**: Use Australian spelling (e.g. *behaviour*, *optimise*), no em dashes, and concise documentation.
+1. **Mandatory Sub-Agents**: Never remove, bypass, or merge `drafter` or `verifier` sub-agents. Both stations are required architectural pillars for separation of duties.
+2. **Blocking Sub-Agent Execution**: Sub-agent delegation must block until completion. The coordinator must not emit interim messages claiming work is running in the background; it must wait for the sub-agent to finish its work, create the files, and return the structured response before communicating with the user.
+3. **Physical File Creation**: Ensure `drafter` actually writes the 4 assurance documents and `verifier` actually writes the verification reports prior to returning completion.
+4. **Check off items sequentially**: Update this `PLAN.md` file after completing each milestone. Commit after each phase.
+5. **Preserve Anonymity**: Ensure zero occurrences of proprietary partner names, personal names, or non-public event dates.
+6. **Keep Code Simple**: Prefer standard Node.js and Eve built-ins over external dependencies.
+7. **Tone and Conventions**: Use Australian spelling (e.g. *behaviour*, *optimise*), no em dashes, and concise documentation.

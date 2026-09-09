@@ -51,10 +51,12 @@ The governance agent assists software engineering teams by:
 
 ### Component Roles
 
-- **Root Coordinator (`agent/instructions.md`)**: Orchestrates the multi-stage governance lifecycle, manages session state, halts at the HITL approval checkpoint via `ask_question`, collects the GitHub pull request URL, and runs the remediation loop.
-- **Drafter Station (`agent/subagents/drafter/`)**: Traverses the policy catalog, determines applicability, extracts normative requirements, and generates four assurance artefacts (`change-design.md`, `security-and-data-review.md`, `implementation-requirements.md`, and `policy-applicability.md`).
-- **Verifier Station (`agent/subagents/verifier/`)**: Clones the public pull request into the sandbox, loads approved requirements from Blob, audits code diffs with line-level evidence, saves versioned reports (`verification-report-attempt-N.md`), and returns an authoritative verdict (`compliant`, `non_compliant`, or `unable_to_verify`).
+- **Root Coordinator (`agent/instructions.md`)**: Orchestrates the multi-stage governance lifecycle and manages session state. It coordinates the mandatory specialist sub-agents, halts at the HITL approval checkpoint via `ask_question`, collects the GitHub pull request URL, and runs the remediation loop. The coordinator operates a blocking execution model: it delegates to sub-agents, blocks until the sub-agent completes its work and returns its response, and only then presents complete results to the operator (never emitting premature interim status messages or running sub-agent tasks as unmonitored background jobs).
+- **Drafter Station Sub-Agent (`agent/subagents/drafter/`)**: **Mandatory sub-agent**. Traverses the policy catalog, determines applicability, extracts normative requirements, and actually creates and persists all four assurance artefacts (`change-design.md`, `security-and-data-review.md`, `implementation-requirements.md`, and `policy-applicability.md`) before finishing.
+- **Verifier Station Sub-Agent (`agent/subagents/verifier/`)**: **Mandatory sub-agent**. Clones the public pull request into the sandbox, loads approved requirements, audits code diffs with line-level evidence, saves versioned reports (`verification-report-attempt-N.md`), and returns an authoritative verdict (`compliant`, `non_compliant`, or `unable_to_verify`) before completing.
 - **Shared Sandbox (`agent/sandbox/`)**: Provides an isolated execution environment containing seeded policies, cloned repositories, and working directories, shared between coordinator and subagents.
+
+> **Architectural Requirement**: Sub-agents (`drafter` and `verifier`) are strictly required components of this architecture and must not be removed, bypassed, or merged into the coordinator at any point. Separation of duties between baseline drafting and independent code verification is foundational to the release assurance model. Furthermore, execution must block during sub-agent delegation so that documents and reports are fully generated before control returns to the operator.
 
 ---
 
@@ -115,6 +117,8 @@ To test the governance agent against real pull requests with intentional violati
 
 ## Operational Safeguards
 
+- **Mandatory Sub-Agents**: The specialist sub-agents (`drafter` and `verifier`) are permanently required architecture components and must not be removed or merged. They enforce rigorous separation of duties between policy analysis and code verification.
+- **Blocking Sub-Agent Execution**: Delegation to sub-agents is strictly synchronous and blocking from the operator's perspective. The coordinator halts and waits for the sub-agent to complete its tasks (including physical file generation) before responding to the user, eliminating premature "background job" acknowledgments.
 - **Sandboxed Execution**: Shell commands, git clones, and code inspections run exclusively within the sandbox, never in the application host environment.
 - **Human-in-the-Loop Gating**: Automated code review cannot commence until a human operator reviews and explicitly approves the drafted assurance baseline.
 - **Durable Audit Trail**: All assurance artefacts and versioned verification reports are stored immutably in Vercel Blob keyed by the root session identifier.
