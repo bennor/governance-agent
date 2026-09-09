@@ -195,12 +195,12 @@ main (baseline app, no feedback feature)
   - [x] Author `agent/subagents/verifier/instructions.md` with git clone/fetch instructions, diff inspection discipline, and evidence citation standards.
 
 ### Phase 4: Root Orchestration & Channel Flow
-- [ ] **4.1 Root Instructions and State Coordination**
-  - [ ] Author `agent/instructions.md` with stage routing (Intake -> Drafter -> HITL Pause -> Verifier -> Loop).
-  - [ ] Configure `ask_question` invocation for document approval and pull request URL collection.
-  - [ ] Configure revision tracking and the 3-attempt failure threshold.
-- [ ] **4.2 Agent Model Configuration**
-  - [ ] Verify `agent/agent.ts` model settings, output limits, and compaction thresholds.
+- [x] **4.1 Root Instructions and State Coordination**
+  - [x] Author `agent/instructions.md` with stage routing (Intake -> Drafter -> HITL Pause -> Verifier -> Loop).
+  - [x] Configure `ask_question` invocation for document approval and pull request URL collection.
+  - [x] Configure revision tracking and the 3-attempt failure threshold.
+- [x] **4.2 Agent Model Configuration**
+  - [x] Verify `agent/agent.ts` model settings, output limits, and compaction thresholds.
 
 ### Phase 5: Test Repository & Documentation
 - [ ] **5.1 Test App Guidance**
