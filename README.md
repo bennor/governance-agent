@@ -115,6 +115,13 @@ To test the governance agent against real pull requests with intentional violati
 
 ---
 
+## Implementation Plans
+
+- [Phase 1 Implementation Plan](PLAN.md): Architecture baseline, storage foundations, drafter and verifier sub-agents, and HITL verification lifecycle.
+- [Phase 2 Implementation Plan](PHASE_TWO_PLAN.md): Interactive web portal, dedicated chat route, deterministic workflow orchestration via `defineWorkflowTool`, and React Flow state graph.
+
+---
+
 ## Operational Safeguards
 
 - **Mandatory Sub-Agents**: The specialist sub-agents (`drafter` and `verifier`) are permanently required architecture components and must not be removed or merged. They enforce rigorous separation of duties between policy analysis and code verification.

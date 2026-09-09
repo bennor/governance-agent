@@ -23,8 +23,8 @@ The governance agent assists engineering teams in regulated organisations to saf
 - **Simplicity Over Completeness**: Designed as an inspectable demonstration. Uses public GitHub repositories without connector authentication, file-traversal RAG in sandboxes instead of vector embeddings, and single-session durable workflows.
 - **Durable Case Identity**: The case ID is the root Eve session ID (`ctx.session.parent?.rootSessionId ?? ctx.session.parent?.sessionId ?? ctx.session.id`).
 - **Phase Separation**:
-  - **Phase 1 (Current)**: Fully Eve-based workflow orchestrated via instructions and declared subagents. Eve channel only.
-  - **Phase 2 (Future)**: Dedicated web portal intake, deterministic stage-gate orchestration with Vercel Workflow SDK, ambient branch monitoring, and relational audit storage.
+  - **Phase 1 (Completed)**: Fully Eve-based workflow orchestrated via instructions and declared subagents. Eve channel only.
+  - **Phase 2 (Active Implementation Plan)**: Dedicated web portal intake, deterministic stage-gate orchestration with Vercel Workflow SDK, interactive React Flow visualization, separate chat routing, and Blob-backed case state. Refer to [PHASE_TWO_PLAN.md](./PHASE_TWO_PLAN.md) for the active Phase 2 execution checklist.
 
 ---
 
