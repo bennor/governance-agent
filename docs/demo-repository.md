@@ -491,26 +491,63 @@ git push -u origin demo/feedback-compliant
 
 ## 6. End-to-End Governance Evaluation Workflow
 
+### 6.1 Example Feature Intake Prompt
+
+Use this exact intake prompt in your Eve session (via `eve dev` or channel) to initiate the governance process. This single intake prompt establishes the assurance baseline used to evaluate both the initial non-compliant pull request and the subsequent compliant remediation:
+
+```text
+We need to implement a customer feedback submission feature for our web application. The change includes:
+1. A new frontend page at /feedback allowing users to submit feedback with their email address and a message.
+2. A backend API endpoint at POST /api/feedback to receive the submission, validate it, and return a response.
+3. Automated test coverage for the new endpoint.
+
+Please review this proposed feature against our engineering and governance standards, determine policy applicability, extract the normative requirements, and generate the assurance baseline documentation.
+```
+
+### 6.2 Evaluation Stages
+
 1. **Intake Phase**:
-   - Provide intake prompt in Eve:
-     `"We need to implement a customer feedback form with email and message inputs, submitting to /api/feedback."`
-   - The Drafter station generates four assurance documents.
-2. **HITL Review**:
-   - Operator reviews documents and provides PR URL for PR #1 (`demo/feedback-non-compliant`).
-3. **Attempt 1 (Non-Compliant)**:
-   - Verifier station audits PR #1.
-   - Generates `verification-report-attempt-1.md`.
-   - Results in `verdict: "non_compliant"` with blocking findings for `SEC-001`, `DAT-003`, `SEC-004`, `TST-003`, and `UI-001`.
+   - Provide the example intake prompt above to the Governance Agent.
+   - The Drafter station analyzes the request against `/workspace/policies/catalog.json`.
+   - The Drafter generates and saves the four assurance documents:
+     - `change-design.md`
+     - `security-and-data-review.md`
+     - `implementation-requirements.md`
+     - `policy-applicability.md`
+
+2. **HITL Baseline Review**:
+   - The Governance Agent halts at the `ask_question` checkpoint, presenting the assurance baseline summary.
+   - Operator reviews the baseline documents and approves by providing the public GitHub pull request URL for PR #1 (`demo/feedback-non-compliant`).
+
+3. **Attempt 1 (Non-Compliant Audit)**:
+   - The Verifier station clones the demo repository, checks out the PR branch, and audits the diff against `implementation-requirements.md`.
+   - The Verifier detects intentional violations:
+     - `SEC-001` & `API-004`: Raw unvalidated input accessed directly from `request.json()`.
+     - `DAT-003` & `OPS-002`: User email (PII) logged via `console.log`.
+     - `SEC-004` & `API-005`: Internal exception message leaked in response body.
+     - `TST-003`: Test suite lacks negative and error rejection cases.
+     - `UI-001`: Form inputs lack associated `<label>` markup.
+   - Saves `verification-report-attempt-1.md`.
+   - Returns `verdict: "non_compliant"` with 5 blocking findings.
+   - The coordinator pauses via `ask_question` prompting the operator to push remediation commits.
+
 4. **Remediation Push**:
-   - In the demo repository, update `demo/feedback-non-compliant` with the compliant code from `demo/feedback-compliant`:
+   - In the demo repository, update the PR branch with the compliant code from `demo/feedback-compliant`:
      ```bash
      git checkout demo/feedback-non-compliant
      git merge --ff-only demo/feedback-compliant
      git push origin demo/feedback-non-compliant
      ```
-5. **Attempt 2 (Compliant)**:
-   - Operator tells the Governance Agent: `"Remediation commits pushed, please re-verify."`
-   - Verifier audits updated PR #1.
-   - Generates `verification-report-attempt-2.md`.
-   - Results in `verdict: "compliant"` with zero blocking findings.
-   - Governance Agent officially issues **APPROVED FOR PRODUCTION RELEASE**.
+
+5. **Attempt 2 (Compliant Audit)**:
+   - Operator responds to the agent prompt: `"Remediation commits pushed, please re-verify."`
+   - The Verifier station re-fetches the PR branch and re-evaluates all controls.
+   - Verifier confirms all controls pass:
+     - Strict Zod schema validation in place (`SEC-001`, `API-004`).
+     - Metadata-only logging without email or PII (`DAT-003`, `OPS-002`).
+     - Sanitised client error envelope with internal details redacted (`SEC-004`, `API-005`).
+     - Automated test suite covering both 201 Created and 400 Bad Request paths (`TST-001`, `TST-002`, `TST-003`).
+     - Programmatic `<label htmlFor="...">` markup and loading states (`UI-001`, `UI-003`).
+   - Saves `verification-report-attempt-2.md`.
+   - Returns `verdict: "compliant"` with 0 blocking findings.
+   - The coordinator issues the official release approval: **APPROVED FOR PRODUCTION RELEASE**.
