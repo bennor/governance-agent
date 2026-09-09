@@ -99,7 +99,11 @@ export function OperatorControls({
     if (busy || !onRespond) return;
     setLocalSubmitting(true);
     try {
-      await onRespond({ optionId: "reverify" });
+      await onRespond({
+        optionId: "reverify",
+        text: prUrlInput.trim() || undefined,
+      });
+      setPrUrlInput("");
     } finally {
       setLocalSubmitting(false);
     }
@@ -263,6 +267,20 @@ export function OperatorControls({
         <p className="text-xs text-muted-foreground leading-relaxed">
           The code audit identified non-compliant controls. Push fixes to your GitHub branch. Once updated, click Re-verify to execute Attempt {(activeAttempt ?? 1) + 1} of 3.
         </p>
+
+        <div className="space-y-1.5 pt-1">
+          <label htmlFor="remediation-pr" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Pull Request URL (optional to update)
+          </label>
+          <Input
+            id="remediation-pr"
+            placeholder="https://github.com/owner/repo/pull/1"
+            value={prUrlInput}
+            onChange={(e) => setPrUrlInput(e.target.value)}
+            disabled={busy}
+            className="text-xs bg-background h-8"
+          />
+        </div>
 
         <div className="flex items-center justify-between gap-3 pt-1">
           <Button

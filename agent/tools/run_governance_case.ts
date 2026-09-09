@@ -289,6 +289,11 @@ export default defineWorkflowTool({
         allowFreeform: true,
       });
 
+      const updatedPr = extractPrUrl(remediationAction.text) || extractPrUrl(remediationAction.optionId);
+      if (updatedPr) {
+        prUrl = updatedPr;
+      }
+
       if (remediationAction.optionId === "cancel") {
         await updateCaseStageStep(caseId, "cancelled", {
           note: "Change cancelled by operator during remediation.",
