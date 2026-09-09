@@ -608,14 +608,14 @@ The `case.json` file is updated after each stage gate to allow server-side dashb
   - Automatic redirect to `/cases/[caseId]` upon session establishment.
 
 ### Phase 2.7: Case Workspace and Visual Workflow Graph
-- [ ] Build `app/_components/workflow-graph.tsx` using `@xyflow/react`:
+- [x] Build `app/_components/workflow-graph.tsx` using `@xyflow/react`:
   - Custom nodes for Intake, Drafting, Review, PR Ready, Verification, Remediation, Verdict.
   - Live status indicators (Pending, In Progress, Complete, Failed).
   - Feedback loops for revisions and remediation.
-- [ ] Build `app/_components/document-viewer.tsx` to display rendered Markdown documents.
-- [ ] Build `app/_components/audit-findings-viewer.tsx` to display control evaluations and citations.
-- [ ] Build `app/_components/operator-controls.tsx` to render interactive approval, revision, PR URL, and remediation buttons.
-- [ ] Assemble `app/cases/[caseId]/page.tsx` integrating the graph, document viewer, and operator controls.
+- [x] Build `app/_components/document-viewer.tsx` to display rendered Markdown documents.
+- [x] Build `app/_components/audit-findings-viewer.tsx` to display control evaluations and citations.
+- [x] Build `app/_components/operator-controls.tsx` to render interactive approval, revision, PR URL, and remediation buttons.
+- [x] Assemble `app/cases/[caseId]/page.tsx` integrating the graph, document viewer, and operator controls.
 
 ### Phase 2.8: API Routes and Proxying
 - [ ] Implement `app/api/cases/route.ts` to list cases for the dashboard.
