@@ -155,9 +155,9 @@ export default defineWorkflowTool({
       break;
     }
 
-    // 3. Obtain GitHub Pull Request URL
-    let prUrl = extractPrUrl(intake.pullRequestUrl);
-    if (!prUrl) {
+    // 3. Obtain GitHub Pull Request URL (mandatory at this stage)
+    let prUrl: string | undefined = undefined;
+    while (!prUrl) {
       await updateCaseStageStep(caseId, "awaiting_pull_request", {
         note: "Baseline approved. Awaiting GitHub pull request URL.",
       });
@@ -175,7 +175,12 @@ export default defineWorkflowTool({
         allowFreeform: true,
       });
 
-      prUrl = extractPrUrl(prResponse.text) || prResponse.text?.trim() || "";
+      const extracted = extractPrUrl(prResponse.text) || extractPrUrl(prResponse.optionId);
+      if (extracted) {
+        prUrl = extracted;
+      } else if (prResponse.text?.trim().startsWith("http")) {
+        prUrl = prResponse.text.trim();
+      }
     }
 
     // 4. Verification & Remediation Loop

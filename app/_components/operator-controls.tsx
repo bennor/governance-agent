@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { EveMessageInputRequest } from "eve/react";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -21,6 +22,7 @@ interface OperatorControlsProps {
   caseId: string;
   stage: GovernanceStage;
   status: GovernanceStatus;
+  pendingInputRequest?: EveMessageInputRequest;
   activeRevision?: number;
   activeAttempt?: number | null;
   blockingCount?: number | null;
@@ -32,6 +34,7 @@ export function OperatorControls({
   caseId,
   stage,
   status,
+  pendingInputRequest,
   activeRevision = 1,
   activeAttempt = 1,
   blockingCount,
@@ -41,48 +44,120 @@ export function OperatorControls({
   const [revisionFeedback, setRevisionFeedback] = useState("");
   const [showRevisionInput, setShowRevisionInput] = useState(false);
   const [prUrlInput, setPrUrlInput] = useState("");
+  const [localSubmitting, setLocalSubmitting] = useState(false);
+
+  const busy = isSubmitting || localSubmitting;
 
   const handleApprove = async () => {
-    if (onRespond) {
+    if (busy || !onRespond) return;
+    setLocalSubmitting(true);
+    try {
       await onRespond({ optionId: "approve" });
+    } finally {
+      setLocalSubmitting(false);
     }
   };
 
   const handleRequestRevision = async () => {
-    if (!revisionFeedback.trim()) return;
-    if (onRespond) {
+    if (busy || !revisionFeedback.trim() || !onRespond) return;
+    setLocalSubmitting(true);
+    try {
       await onRespond({
         optionId: "revise",
         text: revisionFeedback.trim(),
       });
       setShowRevisionInput(false);
       setRevisionFeedback("");
+    } finally {
+      setLocalSubmitting(false);
     }
   };
 
   const handleCancel = async () => {
-    if (onRespond) {
+    if (busy || !onRespond) return;
+    setLocalSubmitting(true);
+    try {
       await onRespond({ optionId: "cancel" });
+    } finally {
+      setLocalSubmitting(false);
     }
   };
 
   const handlePrSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prUrlInput.trim()) return;
-    if (onRespond) {
+    if (busy || !prUrlInput.trim() || !onRespond) return;
+    setLocalSubmitting(true);
+    try {
       await onRespond({ text: prUrlInput.trim() });
       setPrUrlInput("");
+    } finally {
+      setLocalSubmitting(false);
     }
   };
 
   const handleReverify = async () => {
-    if (onRespond) {
+    if (busy || !onRespond) return;
+    setLocalSubmitting(true);
+    try {
       await onRespond({ optionId: "reverify" });
+    } finally {
+      setLocalSubmitting(false);
     }
   };
 
-  // 1. Awaiting Baseline Approval
-  if (stage === "baseline_review" || status === "awaiting_approval") {
+  // Determine active action mode directly from pending request or stage fallback
+  const isPrPrompt =
+    pendingInputRequest?.display === "text" ||
+    pendingInputRequest?.prompt?.toLowerCase().includes("pull request") ||
+    stage === "awaiting_pull_request" ||
+    status === "awaiting_pr";
+
+  const isReviewPrompt =
+    !isPrPrompt &&
+    (pendingInputRequest?.options?.some((o) => o.id === "approve") ||
+      stage === "baseline_review" ||
+      status === "awaiting_approval");
+
+  const isRemediationPrompt =
+    !isPrPrompt &&
+    !isReviewPrompt &&
+    (pendingInputRequest?.options?.some((o) => o.id === "reverify") ||
+      stage === "remediation" ||
+      status === "awaiting_fix");
+
+  // 1. Awaiting Pull Request URL (Check first so an approved baseline immediately requests PR URL)
+  if (isPrPrompt) {
+    return (
+      <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 sm:p-5 text-card-foreground shadow-xs space-y-4">
+        <div className="flex items-center gap-2 border-b border-primary/20 pb-3">
+          <GitPullRequest className="size-4 text-primary" />
+          <span className="font-semibold text-sm">Action Required: Supply Pull Request URL</span>
+        </div>
+
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          The assurance baseline is approved. Provide the public GitHub pull request link to begin automated code auditing.
+        </p>
+
+        <form onSubmit={handlePrSubmit} className="flex gap-2">
+          <Input
+            placeholder="https://github.com/bennor/governance-agent-demo-app/pull/1"
+            value={prUrlInput}
+            onChange={(e) => setPrUrlInput(e.target.value)}
+            disabled={busy}
+            className="text-xs bg-background"
+            required
+          />
+          <Button type="submit" size="sm" disabled={busy || !prUrlInput.trim()} className="gap-1.5 h-9 shrink-0">
+            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+            <span>Start Audit</span>
+          </Button>
+        </form>
+      </div>
+    );
+  }
+
+  // 2. Awaiting Baseline Approval
+  if (isReviewPrompt) {
     return (
       <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4 sm:p-5 text-card-foreground shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-500/20 pb-3">
@@ -105,7 +180,7 @@ export function OperatorControls({
               placeholder="Specify requirements to update (e.g. Add rate limiting control or require negative test cases)..."
               value={revisionFeedback}
               onChange={(e) => setRevisionFeedback(e.target.value)}
-              disabled={isSubmitting}
+              disabled={busy}
               rows={3}
               className="text-xs bg-background"
             />
@@ -113,17 +188,17 @@ export function OperatorControls({
               <Button
                 size="sm"
                 onClick={handleRequestRevision}
-                disabled={isSubmitting || !revisionFeedback.trim()}
+                disabled={busy || !revisionFeedback.trim()}
                 className="gap-1.5 text-xs h-8"
               >
-                {isSubmitting ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCcw className="size-3.5" />}
+                {busy ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCcw className="size-3.5" />}
                 <span>Send Revisions to Drafter</span>
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => setShowRevisionInput(false)}
-                disabled={isSubmitting}
+                disabled={busy}
                 className="h-8 text-xs"
               >
                 Cancel
@@ -136,10 +211,10 @@ export function OperatorControls({
               <Button
                 size="sm"
                 onClick={handleApprove}
-                disabled={isSubmitting}
+                disabled={busy}
                 className="gap-1.5 text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
               >
-                {isSubmitting ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+                {busy ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
                 <span>Approve Baseline</span>
               </Button>
 
@@ -147,7 +222,7 @@ export function OperatorControls({
                 size="sm"
                 variant="outline"
                 onClick={() => setShowRevisionInput(true)}
-                disabled={isSubmitting}
+                disabled={busy}
                 className="gap-1.5 text-xs h-8"
               >
                 <RotateCcw className="size-3.5" />
@@ -159,7 +234,7 @@ export function OperatorControls({
               size="sm"
               variant="destructive"
               onClick={handleCancel}
-              disabled={isSubmitting}
+              disabled={busy}
               className="gap-1.5 text-xs h-8 opacity-80 hover:opacity-100"
             >
               <XCircle className="size-3.5" />
@@ -171,39 +246,8 @@ export function OperatorControls({
     );
   }
 
-  // 2. Awaiting Pull Request URL
-  if (stage === "awaiting_pull_request" || status === "awaiting_pr") {
-    return (
-      <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 sm:p-5 text-card-foreground shadow-xs space-y-4">
-        <div className="flex items-center gap-2 border-b border-primary/20 pb-3">
-          <GitPullRequest className="size-4 text-primary" />
-          <span className="font-semibold text-sm">Action Required: Supply Pull Request URL</span>
-        </div>
-
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Baseline requirements are approved. Provide the public GitHub pull request link to trigger code auditing.
-        </p>
-
-        <form onSubmit={handlePrSubmit} className="flex gap-2">
-          <Input
-            placeholder="https://github.com/owner/repo/pull/1"
-            value={prUrlInput}
-            onChange={(e) => setPrUrlInput(e.target.value)}
-            disabled={isSubmitting}
-            className="text-xs bg-background"
-            required
-          />
-          <Button type="submit" size="sm" disabled={isSubmitting || !prUrlInput.trim()} className="gap-1.5 h-9 shrink-0">
-            {isSubmitting ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-            <span>Start Audit</span>
-          </Button>
-        </form>
-      </div>
-    );
-  }
-
   // 3. In Remediation
-  if (stage === "remediation" || status === "awaiting_fix") {
+  if (isRemediationPrompt) {
     return (
       <div className="rounded-xl border border-orange-500/40 bg-orange-500/5 p-4 sm:p-5 text-card-foreground shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-orange-500/20 pb-3">
@@ -224,10 +268,10 @@ export function OperatorControls({
           <Button
             size="sm"
             onClick={handleReverify}
-            disabled={isSubmitting}
+            disabled={busy}
             className="gap-1.5 text-xs h-8 bg-primary text-primary-foreground"
           >
-            {isSubmitting ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCcw className="size-3.5" />}
+            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCcw className="size-3.5" />}
             <span>Re-verify Pull Request (Attempt {(activeAttempt ?? 1) + 1}/3)</span>
           </Button>
 
@@ -235,7 +279,7 @@ export function OperatorControls({
             size="sm"
             variant="destructive"
             onClick={handleCancel}
-            disabled={isSubmitting}
+            disabled={busy}
             className="gap-1.5 text-xs h-8 opacity-80 hover:opacity-100"
           >
             <XCircle className="size-3.5" />

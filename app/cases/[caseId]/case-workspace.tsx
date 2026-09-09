@@ -40,6 +40,7 @@ export function CaseWorkspace({
   const [documents, setDocuments] = useState(initialDocuments);
   const [reports, setReports] = useState<AttemptReport[]>(initialReports);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isActionPending, setIsActionPending] = useState(false);
 
   // Connect to the active Eve session to listen for streaming events and input requests
   const agent = useEveAgent({
@@ -102,22 +103,38 @@ export function CaseWorkspace({
 
   // Handle human responses (approvals, PR submission, reverify)
   const handleOperatorAction = async (action: { optionId?: string; text?: string }) => {
-    if (pendingInputRequest && "requestId" in pendingInputRequest) {
-      await agent.respond([
-        {
-          requestId: pendingInputRequest.requestId,
-          optionId: action.optionId,
-          text: action.text,
-        },
-      ]);
-      setTimeout(() => void fetchLatestManifest(), 1500);
-      return;
-    }
+    setIsActionPending(true);
+    try {
+      if (pendingInputRequest && "requestId" in pendingInputRequest) {
+        await agent.respond([
+          {
+            requestId: pendingInputRequest.requestId,
+            optionId: action.optionId,
+            text: action.text,
+          },
+        ]);
+        // Fast refresh followed by delayed refresh to catch asynchronous state persistence
+        void fetchLatestManifest();
+        setTimeout(() => void fetchLatestManifest(), 1000);
+        setTimeout(() => void fetchLatestManifest(), 2500);
+        return;
+      }
 
-    // Fallback: send as direct message to session
-    const textMsg = action.text || (action.optionId === "approve" ? "Approve" : action.optionId === "reverify" ? "Re-verify" : "Cancel");
-    await agent.send(textMsg);
-    setTimeout(() => void fetchLatestManifest(), 1500);
+      // Fallback: send as direct message to session
+      const textMsg =
+        action.text ||
+        (action.optionId === "approve"
+          ? "Approve"
+          : action.optionId === "reverify"
+          ? "Re-verify"
+          : "Cancel");
+      await agent.send(textMsg);
+      void fetchLatestManifest();
+      setTimeout(() => void fetchLatestManifest(), 1000);
+      setTimeout(() => void fetchLatestManifest(), 2500);
+    } finally {
+      setIsActionPending(false);
+    }
   };
 
   const stage: GovernanceStage = manifest?.stage || "intake";
@@ -208,11 +225,12 @@ export function CaseWorkspace({
           caseId={caseId}
           stage={stage}
           status={status}
+          pendingInputRequest={pendingInputRequest}
           activeRevision={manifest?.activeRevision ?? 1}
           activeAttempt={manifest?.activeAttempt ?? null}
           blockingCount={manifest?.blockingCount ?? null}
           onRespond={handleOperatorAction}
-          isSubmitting={isBusy}
+          isSubmitting={isBusy || isActionPending}
         />
 
         {/* Dual Workspace Panel: Baseline Documents & Audit Findings */}
