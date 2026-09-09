@@ -88,6 +88,7 @@ export function extractCaseId(ctx: {
 
 /**
  * Saves a case document into Vercel Blob with public access and no random suffix.
+ * Falls back to local workspace filesystem when Blob credentials are not present (e.g. local tests).
  */
 export async function saveCaseDocument({
   caseId,
@@ -96,38 +97,56 @@ export async function saveCaseDocument({
   contentType = "text/markdown; charset=utf-8",
 }: SaveCaseDocumentOptions): Promise<SaveCaseDocumentResult> {
   const pathname = getCaseBlobKey(caseId, filename);
-  const blob = await put(pathname, content, {
-    access: "public",
-    addRandomSuffix: false,
-    contentType,
-  });
 
-  return {
-    url: blob.url,
-    pathname: blob.pathname,
-  };
+  try {
+    const blob = await put(pathname, content, {
+      access: "public",
+      addRandomSuffix: false,
+      contentType,
+    });
+
+    return {
+      url: blob.url,
+      pathname: blob.pathname,
+    };
+  } catch (error) {
+    // If Blob storage fails or no token configured, write to local host workspace
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const hostDir = path.resolve(process.cwd(), "agent/sandbox/workspace/cases", caseId);
+    const hostFilePath = path.join(hostDir, filename);
+
+    await fs.mkdir(path.dirname(hostFilePath), { recursive: true });
+    await fs.writeFile(hostFilePath, content, "utf8");
+
+    return {
+      url: `file://${hostFilePath}`,
+      pathname,
+    };
+  }
 }
 
 /**
  * Reads a case document from Vercel Blob.
- * Supports fallback paths for backward compatibility between Phase 1 and Phase 2.
+ * Supports fallback paths for backward compatibility between Phase 1 and Phase 2,
+ * as well as local workspace filesystem fallback.
  */
 export async function readCaseDocument(
   caseId: string,
   filename: string
 ): Promise<string | null> {
   const primaryPath = getCaseBlobKey(caseId, filename);
-
-  const candidatePaths = [primaryPath];
+  const candidateBlobPaths = [primaryPath];
 
   // If unversioned filename was requested (e.g. implementation-requirements.md),
   // check approved baseline snapshot first, then revision-1 as fallbacks
   if (!filename.includes("/")) {
-    candidatePaths.push(getCaseBlobKey(caseId, getApprovedBaselineDocumentPath(filename)));
-    candidatePaths.push(getCaseBlobKey(caseId, getBaselineDocumentPath(1, filename)));
+    candidateBlobPaths.push(getCaseBlobKey(caseId, getApprovedBaselineDocumentPath(filename)));
+    candidateBlobPaths.push(getCaseBlobKey(caseId, getBaselineDocumentPath(1, filename)));
   }
 
-  for (const pathname of candidatePaths) {
+  // 1. Try Blob storage
+  for (const pathname of candidateBlobPaths) {
     try {
       const result = await get(pathname, { access: "public" });
       if (result && result.stream) {
@@ -137,11 +156,39 @@ export async function readCaseDocument(
       if (error instanceof BlobNotFoundError) {
         continue;
       }
-      if (error instanceof Error && error.message.includes("404")) {
+      if (error instanceof Error && (error.message.includes("404") || error.message.includes("No blob credentials"))) {
         continue;
       }
-      throw error;
+      // If error is other than not found or credential missing, continue to local fallback
+      break;
     }
+  }
+
+  // 2. Try local host workspace fallback
+  try {
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const hostDir = path.resolve(process.cwd(), "agent/sandbox/workspace/cases", caseId);
+
+    const candidateLocalFilenames = [filename];
+    if (!filename.includes("/")) {
+      candidateLocalFilenames.push(getApprovedBaselineDocumentPath(filename));
+      candidateLocalFilenames.push(getBaselineDocumentPath(1, filename));
+    }
+
+    for (const localName of candidateLocalFilenames) {
+      try {
+        const localPath = path.join(hostDir, localName);
+        const content = await fs.readFile(localPath, "utf8");
+        if (content) {
+          return content;
+        }
+      } catch {
+        // Continue
+      }
+    }
+  } catch {
+    // Ignore local fs error
   }
 
   return null;

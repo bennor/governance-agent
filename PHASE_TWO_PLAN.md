@@ -618,9 +618,9 @@ The `case.json` file is updated after each stage gate to allow server-side dashb
 - [x] Assemble `app/cases/[caseId]/page.tsx` integrating the graph, document viewer, and operator controls.
 
 ### Phase 2.8: API Routes and Proxying
-- [ ] Implement `app/api/cases/route.ts` to list cases for the dashboard.
-- [ ] Implement `app/api/cases/[caseId]/route.ts` to return current case manifest and stream status.
-- [ ] Implement `app/api/cases/[caseId]/documents/[...filename]/route.ts` to serve Markdown documents.
+- [x] Implement `app/api/cases/route.ts` to list cases for the dashboard.
+- [x] Implement `app/api/cases/[caseId]/route.ts` to return current case manifest and stream status.
+- [x] Implement `app/api/cases/[caseId]/documents/[...filename]/route.ts` to serve Markdown documents.
 
 ### Phase 2.9: Full System Verification
 - [ ] Run `pnpm run typecheck` across the entire workspace.
