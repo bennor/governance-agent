@@ -623,14 +623,14 @@ The `case.json` file is updated after each stage gate to allow server-side dashb
 - [x] Implement `app/api/cases/[caseId]/documents/[...filename]/route.ts` to serve Markdown documents.
 
 ### Phase 2.9: Full System Verification
-- [ ] Run `pnpm run typecheck` across the entire workspace.
-- [ ] Run `pnpm run build:eve` to ensure agent, subagents, and workflow tools compile cleanly.
-- [ ] Run `pnpm run build` to verify Next.js production builds.
-- [ ] Execute end-to-end demo walkthrough of Phase 2 deterministic workflow:
+- [x] Run `pnpm run typecheck` across the entire workspace.
+- [x] Run `pnpm run build:eve` to ensure agent, subagents, and workflow tools compile cleanly.
+- [x] Run `pnpm run build` to verify Next.js production builds.
+- [x] Execute end-to-end demo walkthrough of Phase 2 deterministic workflow:
   - Non-compliant branch triggers remediation loop.
   - Compliant branch achieves approved status.
-- [ ] Execute end-to-end demo walkthrough of Phase 1 conversational flow in `/chat` to verify backward compatibility.
-- [ ] Update `PLAN.md` and `README.md` to document Phase Two completion.
+- [x] Execute end-to-end demo walkthrough of Phase 1 conversational flow in `/chat` to verify backward compatibility.
+- [x] Update `PLAN.md` and `README.md` to document Phase Two completion.
 
 ---
 
