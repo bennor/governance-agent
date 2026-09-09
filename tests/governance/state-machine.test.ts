@@ -167,3 +167,13 @@ test("transitionCase rejects illegal transitions", () => {
     transitionCase(manifest, "verifying");
   }, InvalidStateTransitionError);
 });
+
+test("extractPrUrl extracts valid github pr urls and rejects invalid input", async () => {
+  const { extractPrUrl } = await import("../../agent/tools/run_governance_case.ts");
+  assert.equal(
+    extractPrUrl("Here is the PR: https://github.com/my-org/my-repo/pull/42 for review"),
+    "https://github.com/my-org/my-repo/pull/42"
+  );
+  assert.equal(extractPrUrl("No PR here"), undefined);
+  assert.equal(extractPrUrl(undefined), undefined);
+});

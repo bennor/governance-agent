@@ -570,17 +570,17 @@ The `case.json` file is updated after each stage gate to allow server-side dashb
 - [x] Add unit tests for storage path derivation, traversal sanitisation, and manifest serialization.
 
 ### Phase 2.3: Deterministic Workflow Tool
-- [ ] Author `agent/tools/run_governance_case.ts`:
+- [x] Author `agent/tools/run_governance_case.ts`:
   - Default execution with `"use workflow"` directive.
   - Replay-safe sub-agent delegation (`await ctx.agent(...)`) to `drafter` for baseline and revisions.
   - Replay-safe sub-agent delegation (`await ctx.agent(...)`) to `verifier` for each audit attempt.
   - Operator checkpoints (`await ctx.ask(...)`) for baseline approval and remediation decisions.
   - Progress event streaming via generator `yield` statements.
   - Safe step boundaries (`"use step"`) for all storage operations.
-- [ ] Update `agent/subagents/drafter/tools/save_document.ts` to support both legacy unversioned paths (Phase 1) and revisioned output paths (Phase 2).
-- [ ] Update `agent/subagents/verifier/tools/read_document.ts` to support reading from the approved baseline snapshot or falling back to unversioned baseline (Phase 1).
-- [ ] Update `agent/subagents/verifier/tools/save_verification_report.ts` to write to versioned attempt paths.
-- [ ] Retain direct sub-agent tools (`drafter` and `verifier`) on the root coordinator to preserve Phase 1 conversational flow.
+- [x] Update `agent/subagents/drafter/tools/save_document.ts` to support both legacy unversioned paths (Phase 1) and revisioned output paths (Phase 2).
+- [x] Update `agent/subagents/verifier/tools/read_document.ts` to support reading from the approved baseline snapshot or falling back to unversioned baseline (Phase 1).
+- [x] Update `agent/subagents/verifier/tools/save_verification_report.ts` to write to versioned attempt paths.
+- [x] Retain direct sub-agent tools (`drafter` and `verifier`) on the root coordinator to preserve Phase 1 conversational flow.
 
 ### Phase 2.4: Root Coordinator Refactoring
 - [ ] Update `agent/instructions.md` with dual-mode dispatch:

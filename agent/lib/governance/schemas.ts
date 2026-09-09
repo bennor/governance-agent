@@ -106,3 +106,66 @@ export const governanceCaseResultSchema = z.object({
 });
 
 export type GovernanceCaseResult = z.infer<typeof governanceCaseResultSchema>;
+
+export const drafterResultSchema = z.object({
+  status: z.enum(["completed", "failed"]),
+  summary: z.string().describe("Executive summary of the change governance analysis"),
+  applicablePolicies: z
+    .array(
+      z.object({
+        policyId: z.string(),
+        title: z.string(),
+        category: z.string(),
+        reason: z.string(),
+      })
+    )
+    .describe("List of policies determined to apply to this change"),
+  controlCount: z
+    .number()
+    .describe("Total number of individual normative controls identified"),
+  documents: z
+    .array(
+      z.object({
+        filename: z.string(),
+        title: z.string(),
+        blobUrl: z.string().optional(),
+        sandboxPath: z.string(),
+      })
+    )
+    .describe("List of generated and saved assurance artefacts"),
+});
+
+export type DrafterResult = z.infer<typeof drafterResultSchema>;
+
+export const verifierResultSchema = z.object({
+  verdict: z
+    .enum(["compliant", "non_compliant", "unable_to_verify"])
+    .describe("Overall compliance determination for the pull request"),
+  attempt: z.number().describe("Verification attempt number (1, 2, or 3)"),
+  summary: z.string().describe("Executive audit summary of the verification"),
+  pullRequestUrl: z.string().describe("The GitHub pull request URL inspected"),
+  blockingCount: z
+    .number()
+    .describe("Number of failing or non-compliant controls preventing release"),
+  findings: z
+    .array(
+      z.object({
+        controlId: z.string(),
+        status: z.enum(["pass", "fail", "not_applicable"]),
+        title: z.string(),
+        evidence: z.string().describe("Specific code files, line numbers, and observations"),
+        remediation: z
+          .string()
+          .optional()
+          .describe("Actionable instructions to resolve the finding if non-compliant"),
+      })
+    )
+    .describe("Control-by-control audit determinations"),
+  reportPath: z.string().describe("Path to the saved report in the sandbox"),
+  reportBlobUrl: z
+    .string()
+    .optional()
+    .describe("URL to the saved report in Vercel Blob storage"),
+});
+
+export type VerifierResult = z.infer<typeof verifierResultSchema>;
