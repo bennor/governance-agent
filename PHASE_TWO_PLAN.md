@@ -583,7 +583,7 @@ The `case.json` file is updated after each stage gate to allow server-side dashb
 - [x] Retain direct sub-agent tools (`drafter` and `verifier`) on the root coordinator to preserve Phase 1 conversational flow.
 
 ### Phase 2.4: Root Coordinator Refactoring
-- [ ] Update `agent/instructions.md` with dual-mode dispatch:
+- [x] Update `agent/instructions.md` with dual-mode dispatch:
   - Default to Phase One conversational orchestration for standard change requests.
   - Direct the coordinator to execute `run_governance_case` only when explicitly prompted with `[Deterministic Workflow]` or when the user specifically requests the deterministic workflow.
   - In Phase One mode, maintain direct delegation to `drafter`, `ask_question` checkpoints, and `verifier`.
