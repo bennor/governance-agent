@@ -185,14 +185,14 @@ main (baseline app, no feedback feature)
   - [x] Author `agent/subagents/drafter/instructions.md` mandating catalog-first policy traversal, requirement extraction, and multi-document generation.
 
 ### Phase 3: Verifier Station
-- [ ] **3.1 Verifier Subagent Definition**
-  - [ ] Author `agent/subagents/verifier/agent.ts` with `outputSchema` capturing requirement-by-requirement verdicts and blocking findings.
-  - [ ] Configure `agent/subagents/verifier/sandbox.ts` to inherit the parent sandbox.
-- [ ] **3.2 Verifier Tools**
-  - [ ] Author `agent/subagents/verifier/tools/read_document.ts` to fetch approved assurance requirements.
-  - [ ] Author `agent/subagents/verifier/tools/save_verification_report.ts` to persist timestamped audit reports.
-- [ ] **3.3 Verifier Instructions**
-  - [ ] Author `agent/subagents/verifier/instructions.md` with git clone/fetch instructions, diff inspection discipline, and evidence citation standards.
+- [x] **3.1 Verifier Subagent Definition**
+  - [x] Author `agent/subagents/verifier/agent.ts` with `outputSchema` capturing requirement-by-requirement verdicts and blocking findings.
+  - [x] Configure `agent/subagents/verifier/sandbox.ts` to inherit the parent sandbox.
+- [x] **3.2 Verifier Tools**
+  - [x] Author `agent/subagents/verifier/tools/read_document.ts` to fetch approved assurance requirements.
+  - [x] Author `agent/subagents/verifier/tools/save_verification_report.ts` to persist timestamped audit reports.
+- [x] **3.3 Verifier Instructions**
+  - [x] Author `agent/subagents/verifier/instructions.md` with git clone/fetch instructions, diff inspection discipline, and evidence citation standards.
 
 ### Phase 4: Root Orchestration & Channel Flow
 - [ ] **4.1 Root Instructions and State Coordination**
