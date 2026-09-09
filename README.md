@@ -1,35 +1,120 @@
-# governance-agent
+# Governance Agent
 
-This is an [eve](https://eve.dev) agent bootstrapped with [`eve init`](https://eve.dev/docs/reference/cli#eve-init).
+An agentic change-management and release assurance system built on the [Eve](https://eve.dev) framework to make regulated software releases faster, safer, and auditable.
 
-## Getting started
+The governance agent assists software engineering teams by:
+1. Translating feature intake prompts into structured compliance and assurance artefacts based on internal engineering standards.
+2. Storing versioned assurance baselines in durable object storage (Vercel Blob).
+3. Enforcing an explicit human-in-the-loop (HITL) review checkpoint before implementation audit begins.
+4. Auditing pull requests in public GitHub repositories against the approved assurance baseline.
+5. Providing actionable remediation guidance and supporting an iterative re-verification loop.
 
-First, run the development server:
+---
 
-```bash
-eve dev
+## Architecture Overview
+
+```
+                                +---------------------------+
+                                |      Human Operator       |
+                                +---------------------------+
+                                  |                       ^
+                 1. Feature Intake|                       | 4. Review & Supply PR
+                                  v                       |
+                        +-------------------+             |
+                        |   Root Agent      |-------------+
+                        |   (Coordinator)   |
+                        +-------------------+
+                          |               |
+         2. Delegate Plan |               | 5. Delegate Audit
+                          v               v
+                +-------------+       +---------------+
+                |   Drafter   |       |   Verifier    |
+                |  (Station)  |       |   (Station)   |
+                +-------------+       +---------------+
+                       |                      |
+      3. Read Policies |     Read Documents   | 6. Clone & Verify
+         & Save Bundle v     & Write Report   v
+          +-----------------------------------------------+
+          |               Shared Sandbox                  |
+          |  - /workspace/policies (Domain Taxonomy)      |
+          |  - /workspace/cases/<sessionId> (Local Cache) |
+          |  - /workspace/repositories (Cloned PRs)       |
+          +-----------------------------------------------+
+                                  |
+                                  | Read / Write
+                                  v
+          +-----------------------------------------------+
+          |          Durable Store (Vercel Blob)          |
+          |  - governance-demo/runs/<sessionId>/...       |
+          +-----------------------------------------------+
 ```
 
-The development TUI opens an interactive session where you can send messages to your agent.
+### Component Roles
 
-Start by editing `agent/instructions.md` to define the agent's identity, purpose, tone, and response guidelines. Configure its model and runtime behavior in `agent/agent.ts`.
+- **Root Coordinator (`agent/instructions.md`)**: Orchestrates the multi-stage governance lifecycle, manages session state, halts at the HITL approval checkpoint via `ask_question`, collects the GitHub pull request URL, and runs the remediation loop.
+- **Drafter Station (`agent/subagents/drafter/`)**: Traverses the policy catalog, determines applicability, extracts normative requirements, and generates four assurance artefacts (`change-design.md`, `security-and-data-review.md`, `implementation-requirements.md`, and `policy-applicability.md`).
+- **Verifier Station (`agent/subagents/verifier/`)**: Clones the public pull request into the sandbox, loads approved requirements from Blob, audits code diffs with line-level evidence, saves versioned reports (`verification-report-attempt-N.md`), and returns an authoritative verdict (`compliant`, `non_compliant`, or `unable_to_verify`).
+- **Shared Sandbox (`agent/sandbox/`)**: Provides an isolated execution environment containing seeded policies, cloned repositories, and working directories, shared between coordinator and subagents.
 
-Add capabilities under `agent/`, including tools, connections, channels, skills, subagents, and schedules. eve reloads your changes as you work.
+---
 
-## Learn more
+## Policy Taxonomy
 
-To learn more about eve, explore these resources:
+Normative standards are organised under `agent/sandbox/workspace/policies/` with an indexed `catalog.json`:
 
-- [eve documentation](https://eve.dev/docs) — learn about eve's features and authoring APIs.
-- [Build an Agent tutorial](https://eve.dev/docs/tutorial/first-agent) — build and deploy an agent step by step.
-- [eve on GitHub](https://github.com/vercel/eve) — view the source and contribute.
+| Policy ID | Title | Key Controls |
+|---|---|---|
+| `POL-ENG-001` | Software Change Standard | `ENG-001` Acceptance criteria, `ENG-002` Bounded scope, `ENG-003` Dependencies, `ENG-004` Environment config, `ENG-005` Docs |
+| `POL-SEC-001` | Secure Coding Standard | `SEC-001` Input validation, `SEC-002` Server authorisation, `SEC-003` No secrets, `SEC-004` Error sanitisation, `SEC-005` Safe queries |
+| `POL-TST-001` | Testing Standard | `TST-001` Automated tests, `TST-002` Happy path coverage, `TST-003` Negative error coverage, `TST-004` Regression integrity |
+| `POL-API-001` | HTTP API Standard | `API-001` HTTP methods, `API-002` Explicit status codes, `API-003` JSON envelopes, `API-004` Schema validation, `API-005` Stack redaction |
+| `POL-UI-001` | Frontend Quality Standard | `UI-001` Form labels, `UI-002` Keyboard navigation, `UI-003` Feedback states, `UI-004` Responsive layout, `UI-005` Dual validation |
+| `POL-OPS-001` | Observability & Errors | `OPS-001` Deliberate error handling, `OPS-002` Sanitised logs, `OPS-003` Structured logs, `OPS-004` Client timeouts, `OPS-005` Bounded retries |
+| `POL-DAT-001` | Application Data Handling | `DAT-001` Classification, `DAT-002` Data minimisation, `DAT-003` No PII in logs, `DAT-004` Retention docs, `DAT-005` Egress notice |
 
-## Deploy on Vercel
+---
 
-Deploy your agent to [Vercel](https://vercel.com) from the project root:
+## Getting Started
 
-```bash
-eve deploy
-```
+### Prerequisites
 
-`eve deploy` links a Vercel project if needed and deploys the agent to production. See the [eve deployment documentation](https://eve.dev/docs/guides/deployment/vercel) for authentication, environment variables, and deployment options.
+- Node.js 24.x
+- pnpm 11+
+- Vercel account with Blob storage configured (for durable storage)
+
+### Local Development
+
+1. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+
+2. Run type checking:
+   ```bash
+   pnpm run typecheck
+   ```
+
+3. Build the agent:
+   ```bash
+   pnpm run build
+   ```
+
+4. Launch the local interactive development session:
+   ```bash
+   pnpm run dev
+   ```
+
+---
+
+## Verification & Demo Repository
+
+To test the governance agent against real pull requests with intentional violations and compliant fixes, refer to the [Test Repository Guide](docs/demo-repository.md).
+
+---
+
+## Operational Safeguards
+
+- **Sandboxed Execution**: Shell commands, git clones, and code inspections run exclusively within the sandbox, never in the application host environment.
+- **Human-in-the-Loop Gating**: Automated code review cannot commence until a human operator reviews and explicitly approves the drafted assurance baseline.
+- **Durable Audit Trail**: All assurance artefacts and versioned verification reports are stored immutably in Vercel Blob keyed by the root session identifier.
+- **Bounded Remediation Loop**: The iteration loop enforces a maximum of 3 verification attempts per case before requiring formal escalation.

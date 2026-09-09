@@ -203,12 +203,12 @@ main (baseline app, no feedback feature)
   - [x] Verify `agent/agent.ts` model settings, output limits, and compaction thresholds.
 
 ### Phase 5: Test Repository & Documentation
-- [ ] **5.1 Test App Guidance**
-  - [ ] Author `docs/demo-repository.md` containing complete scaffolding instructions, code samples for both branches, and testing workflows.
-- [ ] **5.2 Root Documentation Update**
-  - [ ] Update `README.md` to reflect architecture, local testing instructions, and operational safeguards.
-- [ ] **5.3 Anonymity and Neutrality Scan**
-  - [ ] Run automated scan across all repository files to guarantee strict neutrality.
+- [x] **5.1 Test App Guidance**
+  - [x] Author `docs/demo-repository.md` containing complete scaffolding instructions, code samples for both branches, and testing workflows.
+- [x] **5.2 Root Documentation Update**
+  - [x] Update `README.md` to reflect architecture, local testing instructions, and operational safeguards.
+- [x] **5.3 Anonymity and Neutrality Scan**
+  - [x] Run automated scan across all repository files to guarantee strict neutrality.
 
 ---
 
