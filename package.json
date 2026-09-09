@@ -12,6 +12,7 @@
     "dev": "next dev",
     "eval": "eve eval",
     "start": "next start",
+    "test": "node --test 'tests/**/*.test.ts'",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build:eve": "eve build",
     "dev:eve": "eve dev",

@@ -549,16 +549,16 @@ The `case.json` file is updated after each stage gate to allow server-side dashb
 ## 6. Detailed Implementation Checklist
 
 ### Phase 2.1: Shared Schemas and State Machine
-- [ ] Define shared Zod contracts in `agent/lib/governance/schemas.ts`:
+- [x] Define shared Zod contracts in `agent/lib/governance/schemas.ts`:
   - `governanceIntakeSchema`
   - `caseManifestSchema`
   - `workflowProgressSchema`
   - `governanceCaseResultSchema`
-- [ ] Implement pure state machine in `agent/lib/governance/state-machine.ts`:
+- [x] Implement pure state machine in `agent/lib/governance/state-machine.ts`:
   - Allowed transitions and rejection logic.
   - Revision increment and approval snapshot binding.
   - Verification attempt counting and 3-attempt ceiling.
-- [ ] Add unit tests verifying state transitions, invalid transition rejections, and attempt boundaries.
+- [x] Add unit tests verifying state transitions, invalid transition rejections, and attempt boundaries.
 
 ### Phase 2.2: Versioned Storage Layer
 - [ ] Update `agent/lib/documents/storage.ts`:
