@@ -14,10 +14,11 @@ Phase One delivered the foundational governance capabilities: policy catalogue i
 Phase Two builds an interactive, visual operator experience on top of those capabilities by:
 1. Providing a dedicated governance portal at `/` with dashboard summaries, structured intake, and full case workspaces.
 2. Moving conversational interactions to a dedicated `/chat` route, preserving direct access and session resumption.
-3. Replacing model-mediated stage routing with a deterministic, durable workflow tool (`defineWorkflowTool`) that coordinates all phase transitions in code.
+3. Adding a deterministic, durable workflow tool (`defineWorkflowTool`) that coordinates all phase transitions in code when explicitly opted into.
 4. Calling the specialist sub-agents (`drafter` and `verifier`) synchronously from the workflow via `await ctx.agent(...)` for every policy drafting and code audit task.
 5. Visualising the multi-stage governance lifecycle through an interactive, read-only React Flow graph (`@xyflow/react`) that reflects live workflow progress.
 6. Persisting a lightweight `case.json` manifest in Vercel Blob to power dashboard listings and page reloads without requiring relational database infrastructure.
+7. Supporting side-by-side demonstration of both Phase One (instruction-driven conversational coordination) and Phase Two (deterministic stage-gate workflow) within the same codebase.
 
 ### 1.2 Scope and Exclusions
 To keep the demonstration inspectable, fast to run, and focused on core governance UX, Phase Two establishes strict scope boundaries:
@@ -25,11 +26,13 @@ To keep the demonstration inspectable, fast to run, and focused on core governan
 - **In Scope**:
   - Dedicated Next.js web portal at `/`, `/cases/new`, and `/cases/[caseId]`.
   - Dedicated chat interface moved to `/chat` and `/chat/[sessionId]`, with redirects from `/s/*`.
-  - Deterministic stage-gate state machine executed as an Eve default-execution workflow tool.
+  - Side-by-side dual execution architecture: Phase One conversational coordination remains the default path in chat, while Phase Two deterministic workflow execution is triggered on an explicit opt-in basis.
+  - Opt-in trigger mechanism via prompt keywords (e.g. `[Deterministic Workflow]`, `use deterministic workflow`) or automated inclusion via the portal intake form (`/cases/new`).
+  - Deterministic stage-gate state machine executed as an Eve default-execution workflow tool (`run_governance_case`).
   - Synchronous sub-agent delegation to `drafter` (baseline creation, revisions) and `verifier` (code diff audits).
   - Durable human-in-the-loop pauses via `ctx.ask(...)` for baseline review and remediation decisions.
   - Interactive React Flow workflow diagram rendering node states, active stage pulses, revision loops, and remediation loops.
-  - Blob-backed `case.json` state projections and revision-specific artefact storage.
+  - Blob-backed `case.json` state projections and revision-specific artefact storage with backward compatibility for Phase One unversioned documents.
 - **Explicitly Out of Scope**:
   - Relational database storage (PostgreSQL, Neon, Supabase, SQLite).
   - Ambient GitHub webhook listeners and automated background branch polling.
@@ -38,7 +41,9 @@ To keep the demonstration inspectable, fast to run, and focused on core governan
 
 ### 1.3 Core Constraints
 - **Sub-Agent Primacy**: The specialist sub-agents (`drafter` and `verifier`) remain the sole engines for policy assessment and pull request code auditing. The coordinator workflow must never draft assurance documents or perform code diff reviews directly.
-- **Deterministic Orchestration**: State transitions, attempt limits (maximum 3 verification attempts), approval invalidation, and pull request URL validation must be evaluated strictly in TypeScript code rather than left to prompt interpretation.
+- **Dual-Mode Coexistence**: The root coordinator retains direct access to the `drafter` and `verifier` sub-agents so Phase One conversational orchestration continues to function. The deterministic workflow tool does not replace sub-agent tools on the root coordinator; it serves as an alternative orchestration route.
+- **Opt-In Triggering**: The deterministic flow is strictly opt-in. Unless the prompt explicitly requests the deterministic workflow (or originates from the portal intake form), the coordinator runs the Phase One conversational lifecycle.
+- **Deterministic Orchestration**: When opted in, state transitions, attempt limits (maximum 3 verification attempts), approval invalidation, and pull request URL validation must be evaluated strictly in TypeScript code rather than left to prompt interpretation.
 - **Blocking Delegation**: Sub-agent tasks invoked by the workflow tool use `await ctx.agent(...)` with stable replay keys, ensuring execution halts until the sub-agent persists its files and returns its structured schema.
 - **No Relational Infrastructure**: Case listings, status projections, and document retrieval rely exclusively on Vercel Blob storage keys and server-side Next.js route handlers.
 - **Independent Chat Surface**: Conversational access to the root agent must remain functional at `/chat`, with deep links connecting the portal case workspace to the underlying Eve session transcript.
@@ -117,9 +122,11 @@ To keep the demonstration inspectable, fast to run, and focused on core governan
   - Resumes sessions by ID with streaming responses, tool output rendering, and cancellation controls.
   - Backward-compatible redirects from legacy `/s` routes.
 - **Root Coordinator Agent (`agent/agent.ts`, `agent/instructions.md`)**:
-  - Serves as the intake classifier and response presenter.
-  - Delegates execution to the `run_governance_case` workflow tool immediately upon receiving a change request.
-  - Does not attempt to draft documents, inspect code, or advance stages via conversational heuristics.
+  - Serves as the dual-mode router and presenter.
+  - Supports both Phase One (conversational) and Phase Two (deterministic workflow) execution paths.
+  - Defaults to Phase One conversational orchestration when receiving standard change requests.
+  - Selectively delegates execution to the `run_governance_case` workflow tool only when the user explicitly requests the deterministic workflow (by trigger word or prompt prefix).
+  - Retains direct access to `drafter` and `verifier` sub-agent tools to guarantee backward compatibility with Phase One.
 - **Deterministic Workflow Tool (`agent/tools/run_governance_case.ts`)**:
   - Authored using `defineWorkflowTool` with default execution (suspends durably while waiting for inputs).
   - Enforces strict stage transitions: Intake -> Drafting -> Review -> PR Collection -> Verification -> Remediation -> Terminal Verdict.
@@ -128,14 +135,15 @@ To keep the demonstration inspectable, fast to run, and focused on core governan
   - Emits real-time progress snapshots via generator `yield` statements to drive live UI updates.
 - **Drafter Sub-Agent (`agent/subagents/drafter/`)**:
   - Evaluates feature intake against the seven normative policy files in `/workspace/policies/`.
-  - Generates and saves four mandatory markdown artefacts under the active revision path.
+  - Generates and saves four mandatory markdown artefacts. Supports both unversioned root paths (for Phase One) and versioned revision paths (for Phase Two).
 - **Verifier Sub-Agent (`agent/subagents/verifier/`)**:
   - Clones the target public GitHub repository and checks out the pull request ref.
-  - Reads the approved implementation requirements baseline.
+  - Reads the approved implementation requirements baseline (from the approved snapshot path or default root path).
   - Audits code diffs line by line, evaluating controls with concrete evidence.
   - Writes a versioned audit report (`verification-report-attempt-N.md`) and returns structured findings.
 - **Durable Storage (`agent/lib/documents/storage.ts`)**:
   - Persists case manifests, versioned baselines, approved snapshots, and audit reports in Vercel Blob.
+  - Maintains backward compatibility with Phase One unversioned document keys (`governance-demo/runs/<caseId>/...`).
   - Provides server-side helper functions for portal listing and document streaming.
 
 ### 2.2 Sub-Agent Delegation Contract
@@ -151,6 +159,22 @@ Delegation from the deterministic workflow tool to sub-agents adheres to strict 
 ---
 
 ## 3. Deterministic Workflow Specification
+
+### 3.0 Dual-Mode Trigger and Opt-In Mechanics
+To ensure side-by-side demonstration of both Phase One and Phase Two, the system implements an explicit opt-in policy:
+
+1. **Default Mode (Phase One Conversational Flow)**:
+   - When a user submits an intake prompt in `/chat` without mentioning the deterministic workflow (e.g. *"Audit this feature..."*, *"Assess this change..."*), the root coordinator executes its Phase One conversational protocol:
+     - Directly delegates to the `drafter` sub-agent tool.
+     - Invokes `ask_question` for operator review and pull request URL collection.
+     - Directly delegates to the `verifier` sub-agent tool upon receiving the pull request URL.
+     - Operates conversationally without invoking `run_governance_case`.
+2. **Opt-In Mode (Phase Two Deterministic Workflow)**:
+   - Triggered when the intake prompt contains an explicit keyword or prefix:
+     - `[Deterministic Workflow]` (automatically injected by the `/cases/new` web form submission).
+     - Explicit user request in chat: `"use deterministic workflow"`, `"run workflow"`, or `"run governance case"`.
+   - When triggered, the root coordinator immediately calls the `run_governance_case` tool.
+   - The workflow tool executes the durable state machine, yields progress snapshots for the React Flow visual graph, and writes `case.json` manifests.
 
 ### 3.1 Stage-Gate State Machine
 
@@ -398,6 +422,7 @@ app/
   - Public GitHub PR URL (optional at intake)
 - **Pre-Fill Actions**: One-click button to load the canonical demo feedback form prompt.
 - **Submission Action**:
+  - Automatically prepends the `[Deterministic Workflow]` opt-in marker to the prompt.
   - Triggers session creation via `POST /eve/v1/session`.
   - Sends formatted intake JSON.
   - Captures the returned `sessionId` (the case ID) and redirects to `/cases/[sessionId]`.
@@ -425,8 +450,11 @@ This is the primary operational surface for release governance. It features a th
 
 #### Route: `/chat` & `/chat/[sessionId]` (Direct Conversational Interface)
 - Hosts the existing `AgentChat` component.
+- **Dual-Mode Operation**:
+  - Normal prompts (without the opt-in flag) run the Phase One conversational flow (using direct sub-agent tools `drafter` and `verifier` and `ask_question`).
+  - Prompts with `[Deterministic Workflow]` or explicit workflow requests trigger `run_governance_case`.
 - Preserves all conversational capabilities: prompt inputs, streaming markdown, reasoning traces, and raw tool invocation blocks.
-- Top banner: "Viewing Case Transcript for [caseId] - Return to Visual Workspace".
+- Top banner: "Viewing Case Transcript for [caseId] - Return to Visual Workspace" when associated with a case.
 
 ### 4.3 Interactive Workflow Graph (React Flow)
 Using `@xyflow/react`, the portal renders a directed state graph representing the case:
@@ -549,17 +577,17 @@ The `case.json` file is updated after each stage gate to allow server-side dashb
   - Operator checkpoints (`await ctx.ask(...)`) for baseline approval and remediation decisions.
   - Progress event streaming via generator `yield` statements.
   - Safe step boundaries (`"use step"`) for all storage operations.
-- [ ] Update `agent/subagents/drafter/tools/save_document.ts` to support revisioned output paths.
-- [ ] Update `agent/subagents/verifier/tools/read_document.ts` to read from the approved baseline snapshot.
+- [ ] Update `agent/subagents/drafter/tools/save_document.ts` to support both legacy unversioned paths (Phase 1) and revisioned output paths (Phase 2).
+- [ ] Update `agent/subagents/verifier/tools/read_document.ts` to support reading from the approved baseline snapshot or falling back to unversioned baseline (Phase 1).
 - [ ] Update `agent/subagents/verifier/tools/save_verification_report.ts` to write to versioned attempt paths.
-- [ ] Disable the generic root-copy `agent` tool by creating `agent/tools/agent.ts` with `disableTool()`.
+- [ ] Retain direct sub-agent tools (`drafter` and `verifier`) on the root coordinator to preserve Phase 1 conversational flow.
 
 ### Phase 2.4: Root Coordinator Refactoring
-- [ ] Update `agent/instructions.md`:
-  - Direct the coordinator to recognise governance requests and execute `run_governance_case`.
-  - Prohibit direct baseline authoring or code auditing by the coordinator.
-  - Mandate that all sub-agent coordination occurs through the deterministic workflow tool.
-  - Format the returned workflow outcome as an executive summary for chat users.
+- [ ] Update `agent/instructions.md` with dual-mode dispatch:
+  - Default to Phase One conversational orchestration for standard change requests.
+  - Direct the coordinator to execute `run_governance_case` only when explicitly prompted with `[Deterministic Workflow]` or when the user specifically requests the deterministic workflow.
+  - In Phase One mode, maintain direct delegation to `drafter`, `ask_question` checkpoints, and `verifier`.
+  - Format the returned workflow outcome as an executive summary for chat users when Phase Two completes.
 
 ### Phase 2.5: Chat Route Separation
 - [ ] Parameterise `app/_components/agent-chat.tsx` with `sessionBasePath` (defaulting to `/chat`).
@@ -598,9 +626,10 @@ The `case.json` file is updated after each stage gate to allow server-side dashb
 - [ ] Run `pnpm run typecheck` across the entire workspace.
 - [ ] Run `pnpm run build:eve` to ensure agent, subagents, and workflow tools compile cleanly.
 - [ ] Run `pnpm run build` to verify Next.js production builds.
-- [ ] Execute end-to-end demo walkthrough:
+- [ ] Execute end-to-end demo walkthrough of Phase 2 deterministic workflow:
   - Non-compliant branch triggers remediation loop.
   - Compliant branch achieves approved status.
+- [ ] Execute end-to-end demo walkthrough of Phase 1 conversational flow in `/chat` to verify backward compatibility.
 - [ ] Update `PLAN.md` and `README.md` to document Phase Two completion.
 
 ---
@@ -635,7 +664,8 @@ The `case.json` file is updated after each stage gate to allow server-side dashb
    - Operator clicks "View Chat Transcript" to inspect full conversational logs at `/chat/<caseId>`.
 
 ### 7.2 Secondary and Edge-Case Scenarios
-- **Direct Chat Interaction**: Starting a case directly in `/chat` still engages the workflow and links back to `/cases/<caseId>`.
+- **Side-by-Side Phase 1 Conversational Walkthrough**: In `/chat`, operator enters a standard intake prompt without the `[Deterministic Workflow]` tag. The coordinator executes the Phase One conversational lifecycle directly (delegating to `drafter`, asking for approval, and delegating to `verifier`) without invoking `run_governance_case`.
+- **Direct Chat Opt-In**: Starting a case in `/chat` with `[Deterministic Workflow]` engages the workflow tool and links back to `/cases/<caseId>`.
 - **Cancellation**: Operator selects `Cancel change` during review; graph terminates immediately in `Cancelled` state.
 - **Exhausted Attempts**: Three consecutive non-compliant audits trigger automatic terminal `Failed` state.
 - **Transient Clone Errors**: Providing an invalid GitHub URL prompts for re-entry without incrementing the compliance attempt counter.
